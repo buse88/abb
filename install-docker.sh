@@ -27,4 +27,13 @@ echo "docker设置完毕"
 docker version
 docker-compose version
 
+# 创建或更新 /etc/docker/daemon.json  
+sudo mkdir -p /etc/docker  
+sudo tee /etc/docker/daemon.json <<-'EOF'  
+{  
+  "registry-mirrors": ["https://docker.mirrors.ustc.edu.cn/"]  
+}  
+EOF  
+sudo systemctl daemon-reload  
+sudo systemctl restart docker
 
