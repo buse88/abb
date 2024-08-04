@@ -116,6 +116,10 @@ modify_host() {
         echo "Backup already exists: /etc/host_back"
     fi
 
+    # 修改 /etc/hosts 文件
+    execute_command "sudo sh -c 'sed -i \"/# GitHub520 Host Start/Q\" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'"
+    
+
     # 创建定时任务文件
     local cron_file="/tmp/cron_job"
     local cron_job="0 * * * * /usr/bin/curl -s https://raw.hellogithub.com/hosts >> /etc/hosts; echo \$(date) >> /tmp/cron_count.txt"
