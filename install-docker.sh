@@ -1,3 +1,5 @@
+#!/bin/bash  
+
 # 安装Docker所需的依赖  
 sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common  
   
