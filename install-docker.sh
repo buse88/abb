@@ -27,13 +27,25 @@ echo "docker设置完毕"
 docker version
 docker-compose version
 
-# 创建或更新 /etc/docker/daemon.json  
+# 创建目录（如果不存在） /etc/docker/daemon.json
 sudo mkdir -p /etc/docker  
-sudo tee /etc/docker/daemon.json <<-'EOF'  
+
+# 提示用户输入 docker反代地址
+echo -n "请输入 docker代理地址，末尾带上 /例：https://1.com/（如果有多个，用逗号分隔）: "
+read registry_mirrors
+
+# 处理用户输入，确保每个地址都带有双引号
+IFS=',' read -ra ADDR <<< "$registry_mirrors"
+formatted_mirrors=$(printf '"%s",' "${ADDR[@]}")
+formatted_mirrors=${formatted_mirrors%,} # 去掉最后一个逗号
+
+# 将用户输入写入 daemon.json 文件
+sudo tee /etc/docker/daemon.json <<-EOF  
 {  
-  "registry-mirrors": ["https://docker.mirrors.ustc.edu.cn/"]  
+  "registry-mirrors": [${formatted_mirrors}]  
 }  
 EOF  
 sudo systemctl daemon-reload  
 sudo systemctl restart docker
+
 
