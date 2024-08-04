@@ -13,8 +13,8 @@ curl -fsSL https://mirrors.ustc.edu.cn/docker-ce/linux/debian/gpg | sudo apt-key
 echo "安装docker源镜像..."
 sudo add-apt-repository "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
 
-echo "安装docker..."
-sudo apt install docker-ce
+echo "安装docker与docker-compose..."
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
 echo "启动docker..."
 systemctl start docker
@@ -24,5 +24,7 @@ systemctl status docker
 echo "设置开机启动docker..."
 sudo systemctl enable docker
 echo "docker设置完毕"
+docker version
+docker-compose version
 
 
