@@ -8,7 +8,12 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}请选择操作：${NC}"
 echo -e "${GREEN}1. 安装 V2RayA 和 V2Ray${NC}"
 echo -e "${GREEN}2. 卸载 V2RayA 和 V2Ray${NC}"
-echo -e "${GREEN}3. 修改HOST${NC}"
+echo -e "${GREEN}3. 修改HOST${NC}"  
+# 若遇到错误提示 curl: (6) Could not resolve host
+# 解决方法 sudo nano /etc/resolv.conf
+# nameserver 8.8.8.8
+# nameserver 8.8.4.4
+
 echo -e "${GREEN}4. 安装SRT${NC}"
 read -p "输入选择的编号 (1/2/3/4): " choice
 
