@@ -9,13 +9,11 @@ sudo apt update && sudo apt install -y ca-certificates curl gnupg lsb-release
 echo "安装HTTPS支持包..."
 sudo apt -y install apt-transport-https ca-certificates curl software-properties-common
 # 添加软件源的GPG密钥
-echo "添加软件源的GPG密钥..."
+echo "添加阿里源的GPG密钥..."
 sudo curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/aliyun-docker.gpg
 # 添加Docker软件源
-echo "添加Docker软件源..."
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/trusted.gpg.d/aliyun-docker.gpg] https://download.docker.com/linux/debian \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+echo "添加清华 TUNA 的国内源..."
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-ce.gpg] https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/debian $(lsb_release -sc) stable" > /etc/apt/sources.list.d/docker.list > /dev/null
 # 安装
 echo "升级软件源..."
 sudo apt update
