@@ -8,7 +8,7 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}请选择操作：${NC}"
 echo -e "${GREEN}1. 安装 V2RayA 和 V2Ray${NC}"
 echo -e "${GREEN}2. 卸载 V2RayA 和 V2Ray${NC}"
-echo -e "${GREEN}3. 更改 V2RayA 密码${NC}"
+echo -e "${GREEN}3. 修改HOST${NC}"
 echo -e "${GREEN}4. 安装SRT${NC}"
 read -p "输入选择的编号 (1/2/3/4): " choice
 
@@ -90,9 +90,16 @@ elif [ "$choice" == "2" ]; then
 
 elif [ "$choice" == "3" ]; then
     # 更改 V2RayA 密码
-    read -p "请输入新密码: " new_password
-    sudo v2raya config set --key web.password --value "$new_password"
-    echo "密码更改完成。"
+    # 备份 /etc/hosts 文件
+    if [ ! -f /etc/host_back ]; then
+        sudo cp /etc/hosts /etc/host_back
+        echo "Backup created: /etc/host_back"
+    else
+    echo "Backup already exists: /etc/host_back"
+fi
+
+# 修改 /etc/hosts 文件
+sudo sh -c 'sed -i "/# GitHub520 Host Start/Q" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'
 
 elif [ "$choice" == "4" ]; then
     # 安装SRT
