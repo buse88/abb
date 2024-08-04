@@ -1,0 +1,83 @@
+@echo off
+chcp 65001 > nul
+
+rem 微信多开并且自动登录，需要配合多开版微信使用
+rem 干掉所有wechat进程,不需要可以注释
+rem taskkill /f -im wechat.exe > nul
+
+rem 开启延时变量
+setlocal EnableDelayedExpansion
+
+rem 判断BAT文件是否在WeChat Files\All Users下
+if "%cd:~-9,-1%" neq "All User" ( 
+
+    rem 弹窗提示
+    msg * "请将脚本放在WeChat Files\All Users目录内
+
+    rem 终止脚本
+    exit
+)
+
+rem 获取的微信安装目录不正确，请手动指定下方第21行 WeChatPath 变量,并删除rem注释
+rem set WeChatPath=D:\Program Files (x86)\Tencent\WeChat
+rem 判断是否手动设置WeChatPath
+if "%WeChatPath%" equ "" (
+    rem 从注册表获取微信安装目录，如果获取的安装目录不正确，请手动指定下方第21行 WeChatPath 变量,并删除rem注释
+    for /f "skip=1 delims=: tokens=1,*" %%i in ('REG QUERY "HKEY_CURRENT_USER\Software\Tencent\WeChat" /v "InstallPath"') do ( 
+
+        set str=%%i
+        set var=%%j
+
+        set "var=!var:"=!"
+        if not "!var:~-1!"=="=" set WeChatPath=!str:~-1!:!var!
+    ) 
+)
+
+rem 安装目录WeChat.exe是否可访问
+if not exist "%WeChatPath%\WeChat.exe" (
+
+    rem 弹窗提示
+    msg * "获取的安装目录不正确，请手动指定 第21行 WeChatPath 变量"
+
+    rem 终止脚本
+    exit
+)
+
+rem 模拟按键回车，不需要直接删除
+    echo Set objShell = WScript.CreateObject("WScript.Shell") > login.vbs
+    rem 延迟300ms，程序启动慢的话稍微延长点
+    echo WScript.Sleep 500 >> login.vbs
+    rem 模拟回车
+    echo objShell.SendKeys "{ENTER}" >> login.vbs
+rem 模拟按键回车，不需要直接删除
+
+rem 遍历All Users下的文件夹
+for /d %%i in ( * ) do (
+
+    rem 获取目录名
+    set ml2=%%i
+
+    rem 过滤config文件夹
+    if  !ml2! neq config (
+
+        rem 拷贝凭证文件
+        xcopy "%cd%\!ml2!\" "%cd%\config\" /s /e /y
+
+                rem 这里可以延迟1秒，按实际运行情况调整
+        choice /t 2 /d y /n
+
+        rem 打开微信
+        start "" "%WeChatPath%\WeChat.exe"
+
+        rem 模拟按键回车，不需要直接删除
+            cscript login.vbs > nul
+        rem 模拟按键回车，不需要直接删除
+
+        rem 这里可以延迟1秒，按实际运行情况调整，太长会导致第二个号需要重新扫码
+        rem choice /t 2 /d y /n > nul
+    )
+)
+
+rem 模拟按键回车，不需要直接删除
+    del login.vbs
+rem 模拟按键回车，不需要直接删除
