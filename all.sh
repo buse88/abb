@@ -107,7 +107,6 @@ uninstall_v2raya() {
     rm -- "$0"
 }
 
-# 修改 HOST 的函数
 modify_host() {
     # 备份 /etc/hosts 文件
     if [ ! -f /etc/host_back ]; then
@@ -128,31 +127,21 @@ modify_host() {
     echo "$cron_job" > $cron_file
     crontab $cron_file
 
-    echo -e "${GREEN}定时任务已设置，每小时运行一次，总共运行2次。，按键盘ctrl+c退出重新运行即可 ${NC}"
+    echo -e "${GREEN}定时任务已设置，每小时运行一次，总共运行2次。${NC}"
 
-    # 等待 2 小时以运行定时任务 2 次
-    sleep 2h
-
-    # 移除定时任务
-    (crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)
-
-    # 计数文件路径
-    local count_file="/tmp/cron_count.txt"
-
-    # 检查运行次数
-    local run_count=$(wc -l < "$count_file")
-
-    if [ "$run_count" -ge 2 ]; then
-        echo -e "${GREEN}定时任务已运行 2 次，停止定时任务。${NC}"
-        # 删除计数文件
-        rm "$count_file"
-    else
-        echo -e "${RED}定时任务未按预期运行 2 次。${NC}"
+    # 检查是否已安装at命令
+    if ! command -v at &> /dev/null; then
+        echo "安装 at 命令..."
+        sudo apt-get install -y at
     fi
+
+    # 使用 at 命令在 2 小时后移除定时任务
+    echo '(crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)' | at now + 2 hours
 
     # 返回选择页面
     return_to_menu
 }
+
 
 # 安装 Docker 的函数
 install_docker() {
@@ -257,8 +246,8 @@ return_to_menu() {
     echo -e "${GREEN}3. 修改 HOST${NC}"
     echo -e "${GREEN}4. 安装 SRT${NC}"
     echo -e "${GREEN}5. 安装 SRS${NC}"
-    echo -e "${GREEN}6. 退出${NC}"
-    read -p "输入选择的编号 (1-6): " choice
+    echo -e "${GREEN}0. 退出${NC}"
+    read -p "输入选择的编号 (0-5): " choice
 
     case "$choice" in
         1)
@@ -276,12 +265,12 @@ return_to_menu() {
         5)
             install_srs
             ;;
-        6)
+        0)
             echo "退出脚本。"
             exit 0
             ;;
         *)
-            echo "无效的选择。请重新选择 1 到 6 之间的编号。"
+            echo "无效的选择。请重新选择 0 到 5 之间的编号。"
             return_to_menu
             ;;
     esac
