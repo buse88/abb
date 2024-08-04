@@ -4,4 +4,5 @@ WXDK_AutoLogin.bat 微信多开自动登录，需要配合修改版的微信多�
 test.sh 代理以及免代理安装srt跟srs  
 debian12_sources.sh 自动替换debian12软件源并更新  
 debian12-sources.list debian12的软件源  
-install-docker.sh 国内源安装docker
+install-docker.sh 国内源安装docker  
+all.sh 整合test.sh install-docker.sh两个脚本
