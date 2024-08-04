@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# 本代码仅测试 amd64 debian12系统，其他系统请根据代码自行更改
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
@@ -9,7 +8,7 @@ NC='\033[0m'        # 无颜色
 
 # 提示用户选择操作前的颜色提示
 echo -e "${RED}----------1和3二选一即可，不用都安装----------${NC}"
-    
+
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
     echo -e "${RED}检测到 DNS 解析错误，正在修复...${NC}"
@@ -29,69 +28,6 @@ execute_command() {
     if [ $? -ne 0 ]; then
         resolve_dns_issue
         eval "$cmd"
-    fi
-}
-
-# 安装 Docker 的函数
-install_docker() {
-    echo -e "${GREEN}正在安装 Docker...${NC}"
-    sudo apt update
-    sudo apt install -y curl software-properties-common
-    curl -fsSL https://mirrors.ustc.edu.cn/docker-ce/linux/debian/gpg | sudo apt-key add -
-    sudo add-apt-repository "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
-    sudo apt update
-    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-    sudo systemctl start docker
-    sudo systemctl enable docker
-    echo -e "${GREEN}Docker 安装完成。${NC}"
-    docker version
-    docker-compose version
-
-    # 创建目录（如果不存在） /etc/docker/daemon.json
-sudo mkdir -p /etc/docker  
-
-# 提示用户输入 docker 反代地址
-echo -n "请输入 docker 代理地址，末尾带上 /例：https://1.com/（如果有多个，用逗号分隔）: "
-read registry_mirrors
-
-# 处理用户输入，确保每个地址都带有双引号
-IFS=',' read -ra ADDR <<< "$registry_mirrors"
-formatted_mirrors=$(printf '"%s",' "${ADDR[@]}")
-formatted_mirrors=${formatted_mirrors%,} # 去掉最后一个逗号
-
-# 将用户输入写入 daemon.json 文件
-sudo tee /etc/docker/daemon.json <<-EOF
-{
-  "registry-mirrors": [${formatted_mirrors}]
-}
-EOF
-
-sudo systemctl daemon-reload  
-sudo systemctl restart docker
-}
-
-# 安装 SRS 的函数
-install_srs() {
-    # 检查 Docker 是否已安装
-    if ! command -v docker &> /dev/null; then
-        echo -e "${RED}Docker 未安装，正在安装 Docker...${NC}"
-        install_docker
-    fi
-
-    echo "正在安装SRS..."
-    if docker ps -a | grep -q oryx; then
-        echo -e "${RED}SRS容器（oryx）已存在。如果需要重新安装，请先删除现有容器。${NC}"
-        return
-    fi
-
-    docker run --restart always -d -it --name oryx0 -it -v $HOME/data0:/data \
-      -p 80:2022 -p 1935:1935 -p 8000:8000/udp -p 10080:10080/udp \
-      ossrs/oryx:5
-
-    if [ $? -eq 0 ]; then
-        echo "SRS安装并启动成功。"
-    else
-        echo -e "${RED}SRS安装或启动失败。${NC}"
     fi
 }
 
@@ -181,8 +117,93 @@ modify_host() {
         echo "Backup already exists: /etc/host_back"
     fi
 
-    # 修改 /etc/hosts 文件
-    execute_command "sudo sh -c 'sed -i \"/# GitHub520 Host Start/Q\" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'"
+    # 创建定时任务文件
+    local cron_file="/tmp/cron_job"
+    local cron_job="0 * * * * /usr/bin/curl -s https://raw.hellogithub.com/hosts >> /etc/hosts; echo \$(date) >> /tmp/cron_count.txt"
+
+    # 清理任何已有的定时任务
+    (crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)
+
+    # 设置定时任务
+    echo "$cron_job" > $cron_file
+    crontab $cron_file
+
+    echo -e "${GREEN}定时任务已设置，每小时运行一次，总共运行2次。，按键盘ctrl+c退出重新运行即可 ${NC}"
+
+    # 等待 2 小时以运行定时任务 2 次
+    sleep 2h
+
+    # 移除定时任务
+    (crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)
+
+    # 计数文件路径
+    local count_file="/tmp/cron_count.txt"
+
+    # 检查运行次数
+    local run_count=$(wc -l < "$count_file")
+
+    if [ "$run_count" -ge 2 ]; then
+        echo -e "${GREEN}定时任务已运行 2 次，停止定时任务。${NC}"
+        # 删除计数文件
+        rm "$count_file"
+    else
+        echo -e "${RED}定时任务未按预期运行 2 次。${NC}"
+    fi
+
+    # 返回选择页面
+    return_to_menu
+}
+
+# 安装 Docker 的函数
+install_docker() {
+    echo "更新依赖..."
+    sudo apt update
+
+    echo "安装必要依赖..."
+    sudo apt install -y curl software-properties-common
+
+    echo "添加官方密钥..."
+    curl -fsSL https://mirrors.ustc.edu.cn/docker-ce/linux/debian/gpg | sudo apt-key add -
+
+    echo "安装 Docker 源镜像..."
+    sudo add-apt-repository "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
+
+    echo "安装 Docker 与 Docker Compose..."
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+    echo "启动 Docker..."
+    sudo systemctl start docker
+    # 查看 Docker 启动情况
+    sudo systemctl status docker
+
+    echo "设置开机启动 Docker..."
+    sudo systemctl enable docker
+    echo "Docker 设置完毕"
+
+    docker version
+    docker-compose version
+
+    # 创建目录（如果不存在） /etc/docker/daemon.json
+    sudo mkdir -p /etc/docker  
+
+    # 提示用户输入 Docker 反向代理地址
+    echo -n "请输入 Docker 代理地址，末尾带上 /（如果有多个，用逗号分隔）: "
+    read registry_mirrors
+
+    # 处理用户输入，确保每个地址都带有双引号
+    IFS=',' read -ra ADDR <<< "$registry_mirrors"
+    formatted_mirrors=$(printf '"%s",' "${ADDR[@]}")
+    formatted_mirrors=${formatted_mirrors%,} # 去掉最后一个逗号
+
+    # 将用户输入写入 daemon.json 文件
+    sudo tee /etc/docker/daemon.json <<-EOF
+    {
+      "registry-mirrors": [${formatted_mirrors}]  
+} 
+EOF
+
+    sudo systemctl daemon-reload  
+    sudo systemctl restart docker
 }
 
 # 安装 SRT 的函数
@@ -204,25 +225,67 @@ install_srt() {
     execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
 }
 
-while true; do
-    # 提示用户选择操作
+# 安装 SRS 的函数
+install_srs() {
+    # 检查 Docker 是否已安装
+    if ! command -v docker &> /dev/null; then
+        echo -e "${RED}Docker 未安装，正在安装 Docker...${NC}"
+        install_docker
+    fi
+
+    echo "正在安装 SRS..."
+    docker run --restart always -d -it --name oryx0 -v $HOME/data0:/data \
+      -p 80:2022 -p 1935:1935 -p 8000:8000/udp -p 10080:10080/udp \
+      registry.cn-hangzhou.aliyuncs.com/ossrs/oryx
+
+    if [ $? -eq 0 ]; then
+        echo "SRS 安装并启动成功。"
+    else
+        echo -e "${RED}SRS 安装或启动失败。${NC}"
+    fi
+
+    # 返回选择页面
+    return_to_menu
+}
+
+# 返回主菜单的函数
+return_to_menu() {
+    echo -e "${BLUE}----------返回主菜单----------${NC}"
     echo -e "${GREEN}请选择操作：${NC}"
     echo -e "${GREEN}1. 安装 V2RayA${NC}"
     echo -e "${GREEN}2. 卸载 V2RayA${NC}"
-    echo -e "${GREEN}3. 修改HOST${NC}"
-    echo -e "${GREEN}4. 安装SRT${NC}"
-    echo -e "${GREEN}5. 安装SRS${NC}"
-    echo -e "${GREEN}0. 退出${NC}"
-    echo -e "${BLUE}输入选择的编号 (0/1/2/3/4/5): ${NC}"
-    read -p "" choice
+    echo -e "${GREEN}3. 修改 HOST${NC}"
+    echo -e "${GREEN}4. 安装 SRT${NC}"
+    echo -e "${GREEN}5. 安装 SRS${NC}"
+    echo -e "${GREEN}6. 退出${NC}"
+    read -p "输入选择的编号 (1-6): " choice
 
-    case $choice in
-        0) echo "退出脚本"; exit 0 ;;
-        1) install_v2raya ;;
-        2) uninstall_v2raya ;;
-        3) modify_host ;;
-        4) install_srt ;;
-        5) install_srs ;;
-        *) echo "无效的选择。请重新选择。" ;;
+    case "$choice" in
+        1)
+            install_v2raya
+            ;;
+        2)
+            uninstall_v2raya
+            ;;
+        3)
+            modify_host
+            ;;
+        4)
+            install_srt
+            ;;
+        5)
+            install_srs
+            ;;
+        6)
+            echo "退出脚本。"
+            exit 0
+            ;;
+        *)
+            echo "无效的选择。请重新选择 1 到 6 之间的编号。"
+            return_to_menu
+            ;;
     esac
-done
+}
+
+# 启动脚本并显示主菜单
+return_to_menu
