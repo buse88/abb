@@ -127,10 +127,11 @@ modify_host() {
     echo "$cron_job" > $cron_file
     crontab $cron_file
 
-    echo -e "${GREEN}定时任务已设置，每小时运行一次，总共运行2次。${NC}"
+    echo -e "${GREEN}定时任务已设置，每小时运行一次，总共更新2次host后，自动关闭更新。${NC}"
 
     # 检查是否已安装at命令
     if ! command -v at &> /dev/null; then
+           echo -e "${RED}检测到 没有安装at，正在安装，请按 "y"...${NC}"
         echo "安装 at 命令..."
         sudo apt-get install -y at
     fi
@@ -188,7 +189,7 @@ install_docker() {
     sudo tee /etc/docker/daemon.json <<-EOF
     {
       "registry-mirrors": [${formatted_mirrors}]  
-} 
+      } 
 EOF
 
     sudo systemctl daemon-reload  
@@ -225,7 +226,7 @@ install_srs() {
     echo "正在安装 SRS..."
     docker run --restart always -d -it --name oryx0 -v $HOME/data0:/data \
       -p 80:2022 -p 1935:1935 -p 8000:8000/udp -p 10080:10080/udp \
-      registry.cn-hangzhou.aliyuncs.com/ossrs/oryx
+      ossrs/oryx:5
 
     if [ $? -eq 0 ]; then
         echo "SRS 安装并启动成功。"
