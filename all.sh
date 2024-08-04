@@ -117,7 +117,14 @@ modify_host() {
     fi
 
     # 修改 /etc/hosts 文件
+    # 检查是否已安装curl命令
+    if ! command -v curl &> /dev/null; then
+           echo -e "${RED}检测到 没有安装curl，正在安装...${NC}"
+        echo "正在安装 curl..."
+        sudo apt-get install -y curl
+    fi
     execute_command "sudo sh -c 'sed -i \"/# GitHub520 Host Start/Q\" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'"
+    echo "/etc/hosts 文件修改完成..."
     
 
     # 创建定时任务文件
@@ -135,7 +142,7 @@ modify_host() {
 
     # 检查是否已安装at命令
     if ! command -v at &> /dev/null; then
-           echo -e "${RED}检测到 没有安装at，正在安装，请按 "y"...${NC}"
+           echo -e "${RED}检测到 没有安装at，正在安装...${NC}"
         echo "安装 at 命令..."
         sudo apt-get install -y at
     fi
