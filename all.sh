@@ -117,10 +117,10 @@ modify_host() {
     fi
 
     # 修改 /etc/hosts 文件
-    # 检查是否已安装curl命令
+    # 检查是否已安装at命令
     if ! command -v curl &> /dev/null; then
            echo -e "${RED}检测到 没有安装curl，正在安装...${NC}"
-        echo "正在安装 curl..."
+        echo "安装 at 命令..."
         sudo apt-get install -y curl
     fi
     execute_command "sudo sh -c 'sed -i \"/# GitHub520 Host Start/Q\" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'"
@@ -224,6 +224,7 @@ install_srt() {
     fi
 
     execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
+    echo "安装完毕，请重启服务器，重启后端口为：${GREEN}65222"
 }
 
 # 安装 SRS 的函数
