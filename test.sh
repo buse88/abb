@@ -25,7 +25,7 @@ resolve_dns_issue() {
 execute_command() {
     local cmd="$1"
     eval "$cmd"
-    if [ $? -ne 0 ]; then
+    if [ $? -ne 0 ];then
         resolve_dns_issue
         eval "$cmd"
     fi
@@ -47,7 +47,7 @@ install_v2raya() {
     echo -e "${GREEN}2. 本地或github安装${NC}"
     read -p "输入选择的编号 (1/2): " install_method
 
-    if [ "$install_method" == "1" ]; then
+    if [ "$install_method" == "1" ];then
         # 在线安装 V2RayA 和 V2Ray
         echo "正在安装 V2RayA 和 V2Ray..."
         execute_command "wget -qO - https://apt.v2raya.org/key/public-key.asc | sudo tee /etc/apt/keyrings/v2raya.asc"
@@ -56,7 +56,7 @@ install_v2raya() {
         sudo apt install -y v2raya v2ray
         sudo systemctl start v2raya.service
         echo "安装完成。"
-    elif [ "$install_method" == "2" ]; then
+    elif [ "$install_method" == "2" ];then
         # 本地安装 V2RayA 和 V2Ray
         echo "先把deb文件跟rar文件放入/opt目录"
         sudo apt install -y /opt/installer_debian_x64_2.2.5.5.deb
@@ -76,7 +76,7 @@ install_v2raya() {
 
     # 提示用户完成代理设置
     read -p "是否已完成代理设置？(输入 'y' 完成): " proxy_setup
-    if [ "$proxy_setup" == "y" ]; then
+    if [ "$proxy_setup" == "y" ];then
         # 提示用户选择要安装的版本
         echo -e "${GREEN}请选择要安装的版本：${NC}"
         echo -e "${GREEN}1. 5.4${NC}"
@@ -84,9 +84,9 @@ install_v2raya() {
         read -p "输入选择的版本编号 (1/2): " kernel_choice
 
         # 根据用户选择替换 KERNEL=
-        if [ "$kernel_choice" == "1" ]; then
+        if [ "$kernel_choice" == "1" ];then
             kernel_version="5.4"
-        elif [ "$kernel_choice" == "2" ]; then
+        elif [ "$kernel_choice" == "2" ];then
             kernel_version="6.1"
         else
             echo "无效的选择。请重新运行脚本并选择 1 或 2。"
@@ -120,7 +120,7 @@ uninstall_v2raya() {
 
 modify_host() {
     # 备份 /etc/hosts 文件
-    if [ ! -f /etc/host_back ]; then
+    if [ ! -f /etc/host_back ];then
         sudo cp /etc/hosts /etc/host_back
         echo "Backup created: /etc/host_back"
     else
@@ -129,13 +129,13 @@ modify_host() {
 
     # 修改 /etc/hosts 文件
     # 检查是否已安装curl命令
-    if ! command -v curl &> /dev/null; then
+    if ! command -v curl &> /dev/null;then
         echo -e "${RED}检测到 没有安装curl，正在安装...${NC}"
         sudo apt-get install -y curl
     fi
     execute_command "sudo sh -c 'sed -i \"/# GitHub520 Host Start/Q\" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'"
     echo "/etc/hosts 文件修改完成..."
-    
+
     # 创建定时任务文件
     local cron_file="/tmp/cron_job"
     local cron_job="0 * * * * /usr/bin/curl -s https://raw.hellogithub.com/hosts >> /etc/hosts; echo \$(date) >> /tmp/cron_count.txt"
@@ -150,7 +150,7 @@ modify_host() {
     echo -e "${GREEN}定时任务已设置，每小时运行一次，总共更新2次host后，自动关闭更新。${NC}"
 
     # 检查是否已安装at命令
-    if ! command -v at &> /dev/null; then
+    if ! command -v at &> /dev/null;then
         echo -e "${RED}检测到 没有安装at，正在安装...${NC}"
         sudo apt-get install -y at
     fi
@@ -177,6 +177,7 @@ install_docker() {
 
     echo "安装 Docker 与 Docker Compose..."
     sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
     sudo systemctl status docker
 
     echo "设置开机启动 Docker..."
@@ -202,7 +203,7 @@ install_docker() {
     sudo tee /etc/docker/daemon.json <<-EOF
     {
       "registry-mirrors": [${formatted_mirrors}]  
-      } 
+    } 
 EOF
 
     sudo systemctl daemon-reload  
@@ -229,7 +230,7 @@ install_srt() {
 
     # 使用子 Shell 执行命令以避免导航页循环
     (execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh")
-    echo "安装完毕，请重启服务器，重启后端口为：${GREEN}65222"
+    echo "安装完毕，请重启服务器，重启后端口为：${GREEN}65222${NC}"
 
     prompt_return_to_menu
 }
@@ -269,6 +270,7 @@ return_to_menu() {
     echo -e "${GREEN}0. 退出${NC}"
     read -p "输入选择的编号 (0-5): " choice
 
+    echo "你选择了：$choice" # 添加调试信息
     case "$choice" in
         1)
             install_v2raya
