@@ -332,7 +332,7 @@ return_to_menu() {
             exit 0
             ;;
         *)
-            echo "无效的选择。请重新选择 0 到 5 之间的编号。"
+            echo "无效的选择。请重新选择 0 到 6 之间的编号。"
             return_to_menu
             ;;
     esac
