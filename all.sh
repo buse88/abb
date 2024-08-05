@@ -224,7 +224,7 @@ install_srt() {
     fi
 
     execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
-    echo "安装完毕，请重启服务器，重启后端口为：${GREEN}65222"
+    echo "安装完毕，请重启服务器，重启后端口为：65222"
 }
 
 # 安装 SRS 的函数
