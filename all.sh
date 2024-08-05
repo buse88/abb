@@ -9,7 +9,6 @@ BLUE='\033[0;34m'   # 蓝色
 NC='\033[0m'        # 无颜色
 
 # 提示用户选择操作前的颜色提示
-echo -e "${RED}----------1和3二选一即可，不用都安装----------${NC}"
 
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
@@ -35,6 +34,7 @@ execute_command() {
 
 # 安装 V2RayA 的函数
 install_v2raya() {
+    echo -e "${RED}----------V2和Host 二选一即可，不用都安装----------${NC}"
     echo -e "${GREEN}请选择 V2RayA 和 V2Ray 的安装方式：${NC}"
     echo -e "${GREEN}1. 源在线安装${NC}"
     echo -e "${GREEN}2. 本地或github安装${NC}"
@@ -89,6 +89,44 @@ install_v2raya() {
         # 执行代理设置命令，并替换 KERNEL=
         execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
     fi
+    # 返回选择页面
+    return_to_menu
+}
+
+# 更换软件源的函数
+change_sources() {
+    # 定义新源的URL
+    NEW_SOURCES_URL="https://githubdw.8080k.eu.org/https://raw.githubusercontent.com/buse88/abb/main/debian12-sources.list"
+
+    # 备份当前的 sources.list
+    if [ -e /etc/apt/sources.list ]; then
+        echo "正在备份当前的 sources.list 到 sources.list.bak..."
+        sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+    else
+        echo "/etc/apt/sources.list 不存在，跳过备份。"
+    fi
+
+    # 下载新的 sources.list
+    echo "正在下载新的 sources.list..."
+    wget -O /tmp/debian12-sources.list $NEW_SOURCES_URL
+
+    # 检查下载是否成功
+    if [ $? -ne 0 ]; then
+        echo "下载新的 sources.list 失败，请检查 URL 是否正确。"
+        exit 1
+    fi
+
+    # 替换当前的 sources.list
+    echo "正在替换当前的 sources.list..."
+    sudo mv /tmp/debian12-sources.list /etc/apt/sources.list
+
+    # 更新软件包列表
+    echo "正在更新软件包列表..."
+    sudo apt update
+
+    echo "软件源更换完成。"
+    # 返回选择页面
+    return_to_menu
 }
 
 # 卸载 V2RayA 的函数
@@ -111,6 +149,7 @@ uninstall_v2raya() {
 
 modify_host() {
     # 备份 /etc/hosts 文件
+    echo -e "${RED}----------提示：V2和Host 二选一即可，不用都安装----------${NC}"
     if [ ! -f /etc/host_back ]; then
         sudo cp /etc/hosts /etc/host_back
         echo "Backup created: /etc/host_back"
@@ -207,6 +246,8 @@ EOF
 
     sudo systemctl daemon-reload  
     sudo systemctl restart docker
+    # 返回选择页面
+    return_to_menu
 }
 
 # 安装 SRT 的函数
@@ -227,6 +268,8 @@ install_srt() {
 
     execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
     echo "安装完毕，请重启服务器，重启后端口为：65222"
+    # 返回选择页面
+    return_to_menu
 }
 
 # 安装 SRS 的函数
@@ -254,31 +297,35 @@ install_srs() {
 
 # 返回主菜单的函数
 return_to_menu() {
-    echo -e "${BLUE}----------返回主菜单----------${NC}"
     echo -e "${GREEN}请选择操作：${NC}"
-    echo -e "${GREEN}1. 安装 V2RayA${NC}"
-    echo -e "${GREEN}2. 卸载 V2RayA${NC}"
-    echo -e "${GREEN}3. 修改 HOST${NC}"
-    echo -e "${GREEN}4. 安装 SRT${NC}"
-    echo -e "${GREEN}5. 安装 SRS${NC}"
+    echo -e "${GREEN}1. 更换软件源${NC}"
+    echo -e "${GREEN}2. 修改 HOST${NC}"
+    echo -e "${GREEN}3. 安装 SRT${NC}"
+    echo -e "${GREEN}4. 安装 SRS(docker版)${NC}"
+    echo -e "${GREEN}5. 安装 V2${NC}"
+    echo -e "${GREEN}6. 卸载 V2${NC}"
     echo -e "${GREEN}0. 退出${NC}"
-    read -p "输入选择的编号 (0-5): " choice
+    read -p "输入选择的编号 (0-6): " choice
+
 
     case "$choice" in
         1)
-            install_v2raya
+            change_sources
             ;;
         2)
-            uninstall_v2raya
+             modify_host
             ;;
         3)
-            modify_host
-            ;;
-        4)
             install_srt
             ;;
-        5)
+        4)
             install_srs
+            ;;
+        5)
+            install_v2raya
+            ;;
+        6)
+            uninstall_v2raya
             ;;
         0)
             echo "退出脚本。"
