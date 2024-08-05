@@ -265,7 +265,8 @@ install_srt() {
     fi
 
     execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
-    echo "安装完毕，请重启服务器，重启后ssh端口为：65222"
+    echo "看到这个才安装成功 You need to reboot to enable MPTCP, shadowsocks, glorytun and shorewall"
+    echo "若安装成功，请重启服务器，重启后ssh端口为：65222"
     
 }
 
