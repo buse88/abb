@@ -123,7 +123,7 @@ change_sources() {
     # 更新软件包列表
     echo "正在更新软件包列表..."
     sudo apt update
-
+    sudo apt upgrade
     echo "软件源更换完成。"
     # 返回选择页面
     return_to_menu
