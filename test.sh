@@ -94,7 +94,7 @@ install_v2raya() {
         fi
 
         # 执行代理设置命令，并替换 KERNEL=
-        execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
+        bash -c "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
     fi
 
     prompt_return_to_menu
@@ -128,16 +128,14 @@ modify_host() {
     fi
 
     # 修改 /etc/hosts 文件
-    # 检查是否已安装at命令
+    # 检查是否已安装curl命令
     if ! command -v curl &> /dev/null; then
-           echo -e "${RED}检测到 没有安装curl，正在安装...${NC}"
-        echo "安装 at 命令..."
+        echo -e "${RED}检测到 没有安装curl，正在安装...${NC}"
         sudo apt-get install -y curl
     fi
     execute_command "sudo sh -c 'sed -i \"/# GitHub520 Host Start/Q\" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'"
     echo "/etc/hosts 文件修改完成..."
     
-
     # 创建定时任务文件
     local cron_file="/tmp/cron_job"
     local cron_job="0 * * * * /usr/bin/curl -s https://raw.hellogithub.com/hosts >> /etc/hosts; echo \$(date) >> /tmp/cron_count.txt"
@@ -153,15 +151,13 @@ modify_host() {
 
     # 检查是否已安装at命令
     if ! command -v at &> /dev/null; then
-           echo -e "${RED}检测到 没有安装at，正在安装...${NC}"
-        echo "安装 at 命令..."
+        echo -e "${RED}检测到 没有安装at，正在安装...${NC}"
         sudo apt-get install -y at
     fi
 
     # 使用 at 命令在 2 小时后移除定时任务
     echo '(crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)' | at now + 2 hours
 
-    # 返回选择页面
     prompt_return_to_menu
 }
 
@@ -180,11 +176,7 @@ install_docker() {
     sudo add-apt-repository "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
 
     echo "安装 Docker 与 Docker Compose..."
-    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-
-    echo "启动 Docker..."
-    sudo systemctl start docker
-    # 查看 Docker 启动情况```bash
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin```bash
     sudo systemctl status docker
 
     echo "设置开机启动 Docker..."
@@ -235,7 +227,8 @@ install_srt() {
         return
     fi
 
-    execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
+    # 使用子 Shell 执行命令以避免导航页循环
+    (execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh")
     echo "安装完毕，请重启服务器，重启后端口为：${GREEN}65222"
 
     prompt_return_to_menu
