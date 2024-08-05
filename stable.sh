@@ -150,8 +150,8 @@ install_srs() {
     fi
 
     docker run --restart always -d -it --name oryx0 -it -v $HOME/data0:/data \
-      -p 80:2022 -p 1935:1935 -p 8000:8000/udp -p 10080:10080/udp \
-      registry.cn-hangzhou.aliyuncs.com/ossrs/oryx
+      -p 2021:2022 -p 1935:1935 -p 8001:8000/udp -p 10070:10080/udp \
+      registry.cn-hangzhou.aliyuncs.com/ossrs/oryx:5
 
     if [ $? -eq 0 ]; then
         echo "SRS安装并启动成功。"
