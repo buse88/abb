@@ -241,7 +241,7 @@ install_srs() {
       ossrs/oryx:5
 
     if [ $? -eq 0 ]; then
-        echo "SRS 安装并启动成功。"
+        echo "SRS 安装并启动成功。后台地址http://ip:2021 "
     else
         echo -e "${RED}SRS 安装或启动失败。${NC}"
     fi
