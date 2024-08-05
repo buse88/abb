@@ -123,7 +123,7 @@ change_sources() {
     # 更新软件包列表
     echo "正在更新软件包列表..."
     sudo apt update
-    sudo apt upgrade
+    sudo apt upgrade -y
     echo "软件源更换完成。"
     # 返回选择页面
     return_to_menu
@@ -209,9 +209,11 @@ install_docker() {
 
     echo "安装 Docker 源镜像..."
     sudo add-apt-repository "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
+    expect "\r"
+    send "\r"
 
     echo "安装 Docker 与 Docker Compose..."
-    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose
 
     echo "启动 Docker..."
     sudo systemctl start docker
