@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# 只在debian12 adm64机器测试，功能有v2，host，srt，srs，docker在CN网络安装
+
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
