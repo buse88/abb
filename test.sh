@@ -8,6 +8,7 @@ NC='\033[0m'        # 无颜色
 
 # 提示用户选择操作前的颜色提示
 echo -e "${RED}----------1和3二选一即可，不用都安装----------${NC}"
+return_to_menu
 
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
