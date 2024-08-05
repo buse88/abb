@@ -313,4 +313,3 @@ return_to_menu() {
 }
 
 # 启动脚本并显示主菜单
-return_to_menu
