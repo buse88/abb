@@ -246,8 +246,6 @@ EOF
 
     sudo systemctl daemon-reload  
     sudo systemctl restart docker
-    # 返回选择页面
-    return_to_menu
 }
 
 # 安装 SRT 的函数
