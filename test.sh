@@ -176,7 +176,7 @@ install_docker() {
     sudo add-apt-repository "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
 
     echo "安装 Docker 与 Docker Compose..."
-    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin```bash
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
     sudo systemctl status docker
 
     echo "设置开机启动 Docker..."
