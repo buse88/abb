@@ -49,7 +49,7 @@ install_v2raya() {
         echo "安装完成。"
     elif [ "$install_method" == "2" ]; then
         # 本地安装 V2RayA 和 V2Ray
-        echo "请将 .deb 文件和 .zip 文件放入 /opt 目录"
+        echo "先把deb文件跟rar文件放入/opt目录"
         sudo apt install -y /opt/installer_debian_x64_2.2.5.5.deb
         cp /opt/v2ray-linux-64.zip /tmp
         pushd /tmp
@@ -91,7 +91,7 @@ install_v2raya() {
     fi
 
     echo -e "${GREEN}操作完成。输入 0 返回主菜单。${NC}"
-    read -p "按下 [Enter] 键返回主菜单..." 
+    read -p "按下 [Enter] 键返回主菜单..."
     return_to_menu
 }
 
@@ -128,7 +128,7 @@ modify_host() {
 
     # 检查是否已安装curl
     if ! command -v curl &> /dev/null; then
-        echo -e "${RED}检测到没有安装 curl，正在安装...${NC}"
+        echo -e "${RED}检测到 没有安装curl，正在安装...${NC}"
         echo "安装 curl 命令..."
         sudo apt-get install -y curl
     fi
@@ -138,7 +138,7 @@ modify_host() {
 
     # 检查是否已安装at
     if ! command -v at &> /dev/null; then
-        echo -e "${RED}检测到没有安装 at，正在安装...${NC}"
+        echo -e "${RED}检测到 没有安装at，正在安装...${NC}"
         echo "安装 at 命令..."
         sudo apt-get install -y at
     fi
@@ -208,11 +208,11 @@ install_docker() {
     # 将用户输入写入 daemon.json 文件
     sudo tee /etc/docker/daemon.json <<-EOF
     {
-      "registry-mirrors": [${formatted_mirrors}]
-    }
-    EOF
+      "registry-mirrors": [${formatted_mirrors}]  
+      } 
+EOF
 
-    sudo systemctl daemon-reload
+    sudo systemctl daemon-reload  
     sudo systemctl restart docker
 
     echo -e "${GREEN}操作完成。输入 0 返回主菜单。${NC}"
