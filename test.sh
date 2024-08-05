@@ -210,7 +210,7 @@ install_docker() {
     {
       "registry-mirrors": [${formatted_mirrors}]
     }
-EOF
+    EOF
 
     sudo systemctl daemon-reload
     sudo systemctl restart docker
