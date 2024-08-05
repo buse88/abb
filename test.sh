@@ -8,7 +8,14 @@ NC='\033[0m'        # 无颜色
 
 # 提示用户选择操作前的颜色提示
 echo -e "${RED}----------1和3二选一即可，不用都安装----------${NC}"
-return_to_menu
+# 提示用户选择操作  
+echo -e "${GREEN}请选择操作：${NC}"  
+echo -e "${GREEN}1. 安装 V2RayA${NC}"  
+echo -e "${GREEN}2. 卸载 V2RayA${NC}"  
+echo -e "${GREEN}3. 修改HOST${NC}"  
+echo -e "${GREEN}4. 安装SRT${NC}"  
+echo -e "${GREEN}5. 安装SRS${NC}"  
+read -p "输入选择的编号 (1/2/3/4/5): " choice  
 
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
