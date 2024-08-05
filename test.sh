@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# 只在debian12 adm64机器测试，功能有v2，host，srt，srs，docker在CN网络安装
+
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
@@ -8,14 +10,6 @@ NC='\033[0m'        # 无颜色
 
 # 提示用户选择操作前的颜色提示
 echo -e "${RED}----------1和3二选一即可，不用都安装----------${NC}"
-# 提示用户选择操作  
-echo -e "${GREEN}请选择操作：${NC}"  
-echo -e "${GREEN}1. 安装 V2RayA${NC}"  
-echo -e "${GREEN}2. 卸载 V2RayA${NC}"  
-echo -e "${GREEN}3. 修改HOST${NC}"  
-echo -e "${GREEN}4. 安装SRT${NC}"  
-echo -e "${GREEN}5. 安装SRS${NC}"  
-read -p "输入选择的编号 (1/2/3/4/5): " choice  
 
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
@@ -70,7 +64,6 @@ install_v2raya() {
         echo "本地安装完成。"
     else
         echo "无效的选择。请重新运行脚本并选择 1 或 2。"
-        return_to_menu
         return
     fi
 
@@ -90,17 +83,12 @@ install_v2raya() {
             kernel_version="6.1"
         else
             echo "无效的选择。请重新运行脚本并选择 1 或 2。"
-            return_to_menu
             return
         fi
 
         # 执行代理设置命令，并替换 KERNEL=
         execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
     fi
-
-    echo -e "${GREEN}操作完成。输入 0 返回主菜单。${NC}"
-    read -p "按下 [Enter] 键返回主菜单..."
-    return_to_menu
 }
 
 # 卸载 V2RayA 的函数
@@ -119,12 +107,9 @@ uninstall_v2raya() {
     echo "卸载完成。"
     echo "删除脚本自身..."
     rm -- "$0"
-
-    echo -e "${GREEN}操作完成。输入 0 返回主菜单。${NC}"
-    read -p "按下 [Enter] 键返回主菜单..."
-    return_to_menu
 }
 
+# 修改 HOST 的函数
 modify_host() {
     # 备份 /etc/hosts 文件
     if [ ! -f /etc/host_back ]; then
@@ -134,22 +119,14 @@ modify_host() {
         echo "Backup already exists: /etc/host_back"
     fi
 
-    # 检查是否已安装curl
+    # 修改 /etc/hosts 文件
     if ! command -v curl &> /dev/null; then
         echo -e "${RED}检测到 没有安装curl，正在安装...${NC}"
         echo "安装 curl 命令..."
         sudo apt-get install -y curl
     fi
-
     execute_command "sudo sh -c 'sed -i \"/# GitHub520 Host Start/Q\" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'"
     echo "/etc/hosts 文件修改完成..."
-
-    # 检查是否已安装at
-    if ! command -v at &> /dev/null; then
-        echo -e "${RED}检测到 没有安装at，正在安装...${NC}"
-        echo "安装 at 命令..."
-        sudo apt-get install -y at
-    fi
 
     # 创建定时任务文件
     local cron_file="/tmp/cron_job"
@@ -164,11 +141,17 @@ modify_host() {
 
     echo -e "${GREEN}定时任务已设置，每小时运行一次，总共更新2次host后，自动关闭更新。${NC}"
 
+    # 检查是否已安装 at 命令
+    if ! command -v at &> /dev/null; then
+        echo -e "${RED}检测到 没有安装at，正在安装...${NC}"
+        echo "安装 at 命令..."
+        sudo apt-get install -y at
+    fi
+
     # 使用 at 命令在 2 小时后移除定时任务
     echo '(crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)' | at now + 2 hours
 
-    echo -e "${GREEN}操作完成。输入 0 返回主菜单。${NC}"
-    read -p "按下 [Enter] 键返回主菜单..."
+    # 返回选择页面
     return_to_menu
 }
 
@@ -193,7 +176,6 @@ install_docker() {
     sudo systemctl start docker
     # 查看 Docker 启动情况
     sudo systemctl status docker
-
     echo "设置开机启动 Docker..."
     sudo systemctl enable docker
     echo "Docker 设置完毕"
@@ -222,10 +204,6 @@ EOF
 
     sudo systemctl daemon-reload  
     sudo systemctl restart docker
-
-    echo -e "${GREEN}操作完成。输入 0 返回主菜单。${NC}"
-    read -p "按下 [Enter] 键返回主菜单..."
-    return_to_menu
 }
 
 # 安装 SRT 的函数
@@ -241,18 +219,11 @@ install_srt() {
         kernel_version="6.1"
     else
         echo "无效的选择。请重新运行脚本并选择 1 或 2。"
-        echo -e "${GREEN}输入 0 返回主菜单。${NC}"
-        read -p "按下 [Enter] 键返回主菜单..."
-        return_to_menu
         return
     fi
 
     execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
-    echo "安装完毕，请重启服务器，重启后端口为：${GREEN}65222${NC}"
-
-    echo -e "${GREEN}操作完成。输入 0 返回主菜单。${NC}"
-    read -p "按下 [Enter] 键返回主菜单..."
-    return_to_menu
+    echo "安装完毕，请重启服务器，重启后端口为：65222"
 }
 
 # 安装 SRS 的函数
@@ -265,18 +236,51 @@ install_srs() {
 
     echo "正在安装 SRS..."
     docker run --restart always -d -it --name oryx0 -v $HOME/data0:/data \
-      -p 80:2022 -p 1935:1935 -p 8000:8000/udp -p 10080:10080/udp \
+      -p 2021:2022 -p 1935:1935 -p 8088:8000/udp -p 10081:10080/udp \
       ossrs/oryx:5
 
     if [ $? -eq 0 ]; then
-        echo "SRS 安装并启动成功。"
+        echo "SRS 安装并启动成功。后台地址 http://ip:2021 "
     else
         echo -e "${RED}SRS 安装或启动失败。${NC}"
     fi
 
-    echo -e "${GREEN}操作完成。输入 0 返回主菜单。${NC}"
-    read -p "按下 [Enter] 键返回主菜单..."
+    # 返回选择页面
     return_to_menu
+}
+
+# 更换软件源的函数
+change_sources() {
+    # 定义新源的URL
+    NEW_SOURCES_URL="https://githubdw.8080k.eu.org/https://raw.githubusercontent.com/buse88/abb/main/debian12-sources.list"
+
+    # 备份当前的 sources.list
+    if [ -e /etc/apt/sources.list ]; then
+        echo "正在备份当前的 sources.list 到 sources.list.bak..."
+        sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+    else
+        echo "/etc/apt/sources.list 不存在，跳过备份。"
+    fi
+
+    # 下载新的 sources.list
+    echo "正在下载新的 sources.list..."
+    wget -O /tmp/debian12-sources.list $NEW_SOURCES_URL
+
+    # 检查下载是否成功
+    if [ $? -ne 0 ]; then
+        echo "下载新的 sources.list 失败，请检查 URL 是否正确。"
+        exit 1
+    fi
+
+    # 替换当前的 sources.list
+    echo "正在替换当前的 sources.list..."
+    sudo mv /tmp/debian12-sources.list /etc/apt/sources.list
+
+    # 更新软件包列表
+    echo "正在更新软件包列表..."
+    sudo apt update
+
+    echo "软件源更换完成。"
 }
 
 # 返回主菜单的函数
@@ -288,8 +292,9 @@ return_to_menu() {
     echo -e "${GREEN}3. 修改 HOST${NC}"
     echo -e "${GREEN}4. 安装 SRT${NC}"
     echo -e "${GREEN}5. 安装 SRS${NC}"
+    echo -e "${GREEN}6. 更换软件源${NC}"
     echo -e "${GREEN}0. 退出${NC}"
-    read -p "输入选择的编号 (0-5): " choice
+    read -p "输入选择的编号 (0-6): " choice
 
     case "$choice" in
         1)
@@ -307,17 +312,19 @@ return_to_menu() {
         5)
             install_srs
             ;;
+        6)
+            change_sources
+            ;;
         0)
             echo "退出脚本。"
             exit 0
             ;;
         *)
-            echo "无效的选择。请重新选择 0 到 5 之间的编号。"
-            echo -e "${GREEN}输入 0 返回主菜单。${NC}"
-            read -p "按下 [Enter] 键返回主菜单..."
+            echo "无效的选择。请重新选择 0 到 6 之间的编号。"
             return_to_menu
             ;;
     esac
 }
 
 # 启动脚本并显示主菜单
+return_to_menu
