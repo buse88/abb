@@ -208,7 +208,7 @@ install_docker() {
     curl -fsSL https://mirrors.ustc.edu.cn/docker-ce/linux/debian/gpg | sudo apt-key add -
 
     echo "安装 Docker 源镜像..."
-    sudo add-apt-repository "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
+    sudo add-apt-repository -y "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
 
     echo "安装 Docker 与 Docker Compose..."
     sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose
