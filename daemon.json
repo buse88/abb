@@ -1,0 +1,17 @@
+{
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "1GB",
+      "enabled": true
+    }
+  },
+  "experimental": false,
+  "features": {
+    "buildkit": true
+  },
+  "registry-mirrors": [
+    "https://registry.docker-cn.com",
+    "https://docker.mirrors.ustc.edu.cn",
+    "http://hub-mirror.c.163.com"
+  ]
+}
