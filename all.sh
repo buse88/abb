@@ -96,7 +96,7 @@ install_v2raya() {
 # 更换软件源的函数
 change_sources() {
     # 定义新源的URL
-    NEW_SOURCES_URL="https://githubdw.8080k.eu.org/https://raw.githubusercontent.com/buse88/abb/main/debian12-sources.list"
+    NEW_SOURCES_URL="https://gitee.com/t88t/test/raw/master/debian12-sources.list"
 
     # 备份当前的 sources.list
     if [ -e /etc/apt/sources.list ]; then
