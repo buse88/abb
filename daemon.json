@@ -1,4 +1,3 @@
-// 使用方法 修改/etc/docker/daemon.json
 {
   "builder": {
     "gc": {
