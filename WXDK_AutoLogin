@@ -1,9 +1,8 @@
 @echo off
 chcp 65001 > nul
 
-rem 微信多开并且自动登录，需要配合多开版微信使用
 rem 干掉所有wechat进程,不需要可以注释
-rem taskkill /f -im wechat.exe > nul
+taskkill /f -im wechat.exe > nul
 
 rem 开启延时变量
 setlocal EnableDelayedExpansion
@@ -19,7 +18,8 @@ if "%cd:~-9,-1%" neq "All User" (
 )
 
 rem 获取的微信安装目录不正确，请手动指定下方第21行 WeChatPath 变量,并删除rem注释
-rem set WeChatPath=D:\Program Files (x86)\Tencent\WeChat
+rem set WeChatPath=D:\Program Files (x86)\Tencent\WeChat\[3.9.11.19]
+
 rem 判断是否手动设置WeChatPath
 if "%WeChatPath%" equ "" (
     rem 从注册表获取微信安装目录，如果获取的安装目录不正确，请手动指定下方第21行 WeChatPath 变量,并删除rem注释
@@ -46,9 +46,12 @@ if not exist "%WeChatPath%\WeChat.exe" (
 rem 模拟按键回车，不需要直接删除
     echo Set objShell = WScript.CreateObject("WScript.Shell") > login.vbs
     rem 延迟300ms，程序启动慢的话稍微延长点
-    echo WScript.Sleep 500 >> login.vbs
+    echo WScript.Sleep 1000 >> login.vbs
+    echo 生成按键回车vbs,当前延迟1秒按回车
+
     rem 模拟回车
     echo objShell.SendKeys "{ENTER}" >> login.vbs
+    echo 模拟回车写入vbs完成
 rem 模拟按键回车，不需要直接删除
 
 rem 遍历All Users下的文件夹
@@ -60,24 +63,30 @@ for /d %%i in ( * ) do (
     rem 过滤config文件夹
     if  !ml2! neq config (
 
+        echo 即将拷贝 !ml2! 
         rem 拷贝凭证文件
-        xcopy "%cd%\!ml2!\" "%cd%\config\" /s /e /y
+        xcopy "%cd%\!ml2!\" "%cd%\config\" /y /s /e 
+        echo 已将 !ml2! 文件夹的内容拷贝到 config 文件夹。
 
-                rem 这里可以延迟1秒，按实际运行情况调整
-        choice /t 2 /d y /n
+        rem 这里可以延迟1秒，按实际运行情况调整
+        choice /t 1 /d y /n
+        echo 1秒后打开微信。
 
         rem 打开微信
         start "" "%WeChatPath%\WeChat.exe"
+        echo 微信已打开
 
         rem 模拟按键回车，不需要直接删除
-            cscript login.vbs > nul
-        rem 模拟按键回车，不需要直接删除
-
-        rem 这里可以延迟1秒，按实际运行情况调整，太长会导致第二个号需要重新扫码
-        rem choice /t 2 /d y /n > nul
+        cscript login.vbs > nul
+        echo 模拟按键回车
+        echo 8秒后，准备下一个账号，按实际运行情况调整，太长会导致第二个号需要重新扫码
+        choice /t 8 /d y /n > nul
+        echo 开始下一个账号
+        
     )
 )
 
-rem 模拟按键回车，不需要直接删除
+    rem 模拟按键回车，不需要直接删除
     del login.vbs
-rem 模拟按键回车，不需要直接删除
+    rem echo 任意按键退出
+rem pause 
