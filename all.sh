@@ -32,12 +32,29 @@ execute_command() {
     fi
 }
 
+# 检查系统架构并下载相应的文件
+check_architecture_and_download() {
+    ARCH=$(uname -m)
+    if [ "$ARCH" == "x86_64" ]; then
+        echo "检测到系统架构为 amd64"
+        execute_command "wget -P /opt https://gitee.com/t88t/test/releases/download/v2/installer_debian_amdx64_2.2.5.5.deb"
+        execute_command "wget -P /opt https://gitee.com/t88t/test/releases/download/v2/v2ray-linux-amd64.zip"
+    elif [ "$ARCH" == "aarch64" ]; then
+        echo "检测到系统架构为 arm64"
+        execute_command "wget -P /opt https://gitee.com/t88t/test/releases/download/v2/installer_debian_arm64_2.2.5.5.deb"
+        execute_command "wget -P /opt https://gitee.com/t88t/test/releases/download/v2/v2ray-linux-arm64-v8a.zip"
+    else
+        echo -e "${RED}未支持的系统架构: $ARCH${NC}"
+        exit 1
+    fi
+}
+
 # 安装 V2RayA 的函数
 install_v2raya() {
     echo -e "${RED}----------V2和Host 二选一即可，不用都安装----------${NC}"
     echo -e "${GREEN}请选择 V2RayA 和 V2Ray 的安装方式：${NC}"
     echo -e "${GREEN}1. 源在线安装${NC}"
-    echo -e "${GREEN}2. 本地或github安装${NC}"
+    echo -e "${GREEN}2. 本地或giee安装${NC}"
     read -p "输入选择的编号 (1/2): " install_method
 
     if [ "$install_method" == "1" ]; then
@@ -51,14 +68,15 @@ install_v2raya() {
         echo "安装完成。"
     elif [ "$install_method" == "2" ]; then
         # 本地安装 V2RayA 和 V2Ray
-        echo "先把deb文件跟rar文件放入/opt目录"
-        sudo apt install -y /opt/installer_debian_x64_2.2.5.5.deb
-        cp /opt/v2ray-linux-64.zip /tmp
+        echo "若是本地安装先把deb文件跟rar文件放入/opt目录"
+        check_architecture_and_download
+        sudo apt install -y /opt/installer_debian_amdx64_2.2.5.5.deb
+        cp /opt/v2ray-linux-amd64.zip /tmp
         pushd /tmp
-        unzip v2ray-linux-64.zip -d ./v2ray
+        unzip v2ray-linux-amd64.zip -d ./v2ray
         mkdir -p /usr/local/share/v2ray && cp ./v2ray/*dat /usr/local/share/v2ray
         install -Dm755 ./v2ray/v2ray /usr/local/bin/v2ray
-        rm -rf ./v2ray v2ray-linux-64.zip
+        rm -rf ./v2ray v2ray-linux-amd64.zip
         sudo systemctl start v2raya.service
         popd
         echo "本地安装完成。"
@@ -205,7 +223,7 @@ install_docker() {
     sudo apt install -y curl software-properties-common
 
     echo "添加官方密钥..."
-    curl -fsSL https://mirrors.ustc.edu.cn/docker-ce/linux/debian/gpg | sudo apt-key add -
+    curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/debian/gpg?spm=a2c6h.25603864.0.0.6c6c655f03u3cp | sudo apt-key add -
 
     echo "安装 Docker 源镜像..."
     sudo add-apt-repository -y "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
