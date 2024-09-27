@@ -112,21 +112,42 @@ install_v2raya() {
 }
 
 # 更换软件源的函数
+# 更换软件源的函数
 change_sources() {
-    # 定义新源的URL
-    NEW_SOURCES_URL="https://gitee.com/t88t/test/raw/master/debian12-sources.list"
+    echo -e "${GREEN}请选择要更换的软件源：${NC}"
+    echo -e "${GREEN}1. 教育网源${NC}"
+    echo -e "${GREEN}2. 阿里云源${NC}"
+    echo -e "${GREEN}3. 清华源${NC}"
+    read -p "输入选择的编号 (1/2/3): " source_choice
 
-    # 备份当前的 sources.list
-    if [ -e /etc/apt/sources.list ]; then
+    # 定义不同源的URL
+    case "$source_choice" in
+        1)
+            NEW_SOURCES_URL="https://gitee.com/t88t/test/raw/master/debian12-edu-sources.list"
+            ;;
+        2)
+            NEW_SOURCES_URL="https://gitee.com/t88t/test/raw/master/debian12-aliyun-sources.list"
+            ;;
+        3)
+            NEW_SOURCES_URL="https://gitee.com/t88t/test/raw/master/debian12-tsinghua-sources.list"
+            ;;
+        *)
+            echo "无效的选择，请重新运行脚本并选择 1/2/3。"
+            return
+            ;;
+    esac
+
+    # 检查是否已经存在备份文件
+    if [ ! -f /etc/apt/sources.list.bak ]; then
         echo "正在备份当前的 sources.list 到 sources.list.bak..."
         sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
     else
-        echo "/etc/apt/sources.list 不存在，跳过备份。"
+        echo "已存在备份文件 sources.list.bak，跳过备份。"
     fi
 
     # 下载新的 sources.list
     echo "正在下载新的 sources.list..."
-    wget -O /tmp/debian12-sources.list $NEW_SOURCES_URL
+    wget -O /tmp/debian-sources.list "$NEW_SOURCES_URL"
 
     # 检查下载是否成功
     if [ $? -ne 0 ]; then
@@ -136,16 +157,16 @@ change_sources() {
 
     # 替换当前的 sources.list
     echo "正在替换当前的 sources.list..."
-    sudo mv /tmp/debian12-sources.list /etc/apt/sources.list
+    sudo mv /tmp/debian-sources.list /etc/apt/sources.list
 
     # 更新软件包列表
     echo "正在更新软件包列表..."
     sudo apt update
-    #sudo apt upgrade -y
     echo "软件源更换完成。"
     # 返回选择页面
     return_to_menu
 }
+
 
 # 卸载 V2RayA 的函数
 uninstall_v2raya() {
