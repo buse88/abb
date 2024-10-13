@@ -1,0 +1,32 @@
+#!/bin/sh /etc/rc.common
+
+START=89
+STOP=70
+SERVICE=sh
+PROG=/root/screen/startall.sh
+USE_PROCD=1
+
+start_service()
+{
+    echo service startall.sh start
+    procd_open_instance
+    procd_set_param command $PROG
+    procd_set_param respawn
+    procd_close_instance
+}
+
+service_triggers()
+{
+    procd_add_reload_trigger startall.sh
+}
+
+stop_service()
+{
+	echo service startall.sh stop
+}
+
+restart() 
+{
+	stop
+	start
+}
