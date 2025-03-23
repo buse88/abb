@@ -332,6 +332,11 @@ install_srs() {
     return_to_menu
 }
 
+# 检测脚本是否通过管道运行
+is_piped() {
+    [ -t 0 ] && return 1 || return 0
+}
+
 # 返回主菜单的函数
 return_to_menu() {
     echo -e "${GREEN}请选择操作：${NC}"
@@ -376,4 +381,23 @@ return_to_menu() {
 }
 
 # 启动脚本并显示主菜单
-return_to_menu
+if is_piped; then
+    # 通过管道运行时，提示用户正确的执行方式
+    echo -e "${RED}检测到通过管道执行脚本。${NC}"
+    echo -e "${RED}此脚本含有交互式操作，无法通过管道正常运行。${NC}"
+    echo -e "${GREEN}请使用以下命令在Debian系统上正确运行此脚本：${NC}"
+    echo ""
+    echo -e "${BLUE}方法1: 下载后执行${NC}"
+    echo -e "wget -O setup.sh https://your-script-url"
+    echo -e "chmod +x setup.sh"
+    echo -e "./setup.sh"
+    echo ""
+    echo -e "${BLUE}方法2: 使用bash直接执行${NC}"
+    echo -e "wget -O setup.sh https://your-script-url && bash setup.sh"
+    echo ""
+    echo -e "${RED}注意：请将上述命令中的URL替换为实际的脚本URL${NC}"
+    exit 1
+else
+    # 非管道方式运行，正常显示交互式菜单
+    return_to_menu
+fi
