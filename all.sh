@@ -2,7 +2,7 @@
 
 # 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
-echo -e "版本 V2.4"
+echo -e "版本 V2.5"
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
@@ -99,7 +99,7 @@ install_v2raya() {
         fi
 
         # 执行代理设置命令，并替换 KERNEL=
-        execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
+        execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"${kernel_version}\" sh"
     fi
     # 返回选择页面
     return_to_menu
@@ -210,14 +210,26 @@ modify_host() {
     # 定义 GitHub 域名列表
     DOMAINS=("github.com" "api.github.com" "raw.githubusercontent.com" "assets-cdn.github.com")
 
+    # 定义备选 DNS 服务器
+    DNS_SERVERS=("8.8.8.8" "1.1.1.1" "114.114.114.114")
+
     # 解析域名并测试最佳 IP
     echo "解析域名并选择最佳 IP..."
     BEST_IPS=()
     for DOMAIN in "${DOMAINS[@]}"; do
-        # 使用 dig 解析域名，获取 IP 地址列表，使用 Google DNS (8.8.8.8)
-        IP_LIST=$(dig @8.8.8.8 +short "$DOMAIN" A | grep -v '\.$')
+        IP_LIST=""
+        # 尝试多个 DNS 服务器解析域名
+        for DNS in "${DNS_SERVERS[@]}"; do
+            echo -e "${BLUE}尝试使用 DNS $DNS 解析 $DOMAIN...${NC}"
+            IP_LIST=$(dig @"$DNS" +short "$DOMAIN" A | grep -v '\.$')
+            if [ -n "$IP_LIST" ]; then
+                echo -e "${BLUE}解析结果: $IP_LIST${NC}"
+                break
+            fi
+        done
+
         if [ -z "$IP_LIST" ]; then
-            echo -e "${RED}未找到 $DOMAIN 的 IP 地址，请检查网络或 DNS 设置。${NC}"
+            echo -e "${RED}未找到 $DOMAIN 的 IP 地址，所有 DNS 服务器均无响应，请检查网络或 DNS 设置。${NC}"
             continue
         fi
 
@@ -240,7 +252,7 @@ modify_host() {
             BEST_IPS+=("$BEST_IP")
             echo "$DOMAIN 的最佳 IP: $BEST_IP (延迟: $MIN_DELAY ms)"
         else
-            echo -e "${RED}未找到 $DOMAIN 的可用 IP 地址，可能无法 ping 通。${NC}"
+            echo -e "${RED}未找到 $DOMAIN 的可用 IP 地址，可能无法 ping 通或所有 IP 无效。${NC}"
         fi
     done
 
@@ -253,7 +265,7 @@ modify_host() {
             # 移除已有的该域名条目
             sudo sed -i "/$DOMAIN/d" /etc/hosts
             # 添加新的 IP 和域名映射
-            echo "$IP $ AssetsDOMAIN" | sudo tee -a /etc/hosts > /dev/null
+            echo "$IP $DOMAIN" | sudo tee -a /etc/hosts > /dev/null
         fi
     done
 
@@ -336,7 +348,7 @@ install_srt() {
         return
     fi
 
-    execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
+    execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"${kernel_version}\" sh"
     echo "看到这个才安装成功 You need to reboot to enable MPTCP, shadowsocks, glorytun and shorewall"
     echo "若安装成功，请重启服务器，重启后 ssh 端口为：65222"
 }
