@@ -2,7 +2,7 @@
 
 # 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
- echo -e "版本 V2.1"
+echo -e "版本 V2.2"
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
@@ -183,10 +183,28 @@ modify_host() {
         echo "备份已存在: /etc/host_back"
     fi
 
+    # 检查并安装 curl（如果未安装）
+    if ! command -v curl &> /dev/null; then
+        echo -e "${RED}未检测到 curl，正在安装...${NC}"
+        sudo apt update
+        sudo apt install -y curl
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}安装 curl 失败，请手动安装 curl 后重试。${NC}"
+            return
+        fi
+        echo -e "${GREEN}curl 安装成功，继续执行...${NC}"
+    fi
+
     # 检查并安装 jq 工具（用于解析 JSON）
     if ! command -v jq &> /dev/null; then
-        echo "安装 jq..."
+        echo -e "${RED}未检测到 jq，正在安装...${NC}"
+        sudo apt update
         sudo apt install -y jq
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}安装 jq 失败，请手动安装 jq 后重试。${NC}"
+            return
+        fi
+        echo -e "${GREEN}jq 安装成功，继续执行...${NC}"
     fi
 
     # 定义 GitHub 域名列表
