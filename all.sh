@@ -2,6 +2,7 @@
 
 # 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
+ echo -e "版本 V2.1"
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
@@ -173,6 +174,8 @@ uninstall_v2raya() {
 # 修改 HOST 的函数
 modify_host() {
     echo -e "${RED}----------提示：V2和Host 二选一即可，不用都安装----------${NC}"
+
+    # 备份 /etc/hosts 文件
     if [ ! -f /etc/host_back ]; then
         sudo cp /etc/hosts /etc/host_back
         echo "备份创建: /etc/host_back"
@@ -180,18 +183,67 @@ modify_host() {
         echo "备份已存在: /etc/host_back"
     fi
 
-    # 修改 /etc/hosts 文件
-    execute_command "sudo sh -c 'sed -i \"/# GitHub520 Host Start/Q\" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'"
-    echo "/etc/hosts 文件修改完成..."
+    # 检查并安装 jq 工具（用于解析 JSON）
+    if ! command -v jq &> /dev/null; then
+        echo "安装 jq..."
+        sudo apt install -y jq
+    fi
 
-    # 设置定时任务
-    local cron_job="0 * * * * /usr/bin/curl -s https://raw.hellogithub.com/hosts >> /etc/hosts; echo \$(date) >> /tmp/cron_count.txt"
-    (crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)
-    echo "$cron_job" | crontab -
-    echo -e "${GREEN}定时任务已设置，每小时运行一次，总共更新2次host后，自动关闭更新。${NC}"
+    # 定义 GitHub 域名列表
+    DOMAINS=("github.com" "api.github.com" "raw.githubusercontent.com" "assets-cdn.github.com")
 
-    # 使用 at 命令在 2 小时后移除定时任务
-    echo '(crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)' | at now + 2 hours
+    # 获取 GitHub API 响应
+    echo "获取 GitHub API 响应..."
+    META_JSON=$(curl -s https://api.github.com/meta)
+    if [ -z "$META_JSON" ]; then
+        echo -e "${RED}无法获取 GitHub API 响应，请检查网络连接。${NC}"
+        return
+    fi
+
+    # 解析 JSON 并测试每个域名的最佳 IP
+    echo "测试 IP 地址并选择最佳 IP..."
+    BEST_IPS=()
+    for DOMAIN in "${DOMAINS[@]}"; do
+        # 从 API 响应中提取该域名的 IP 地址列表
+        IP_LIST=$(echo "$META_JSON" | jq -r --arg domain "$DOMAIN" '.web[] | select(.hostname == $domain) | .ip // empty')
+        if [ -z "$IP_LIST" ]; then
+            echo -e "${RED}未找到 $DOMAIN 的 IP 地址。${NC}"
+            continue
+        fi
+
+        # 测试每个 IP 的延迟，选择延迟最低的 IP
+        BEST_IP=""
+        MIN_DELAY=999999
+        for IP in $IP_LIST; do
+            DELAY=$(ping -c 1 -w 2 "$IP" | grep 'time=' | awk -F'time=' '{print $2}' | awk '{print $1}')
+            if [ -n "$DELAY" ] && (( $(echo "$DELAY < $MIN_DELAY" | bc -l) )); then
+                MIN_DELAY=$DELAY
+                BEST_IP=$IP
+            fi
+        done
+
+        if [ -n "$BEST_IP" ]; then
+            BEST_IPS+=("$BEST_IP")
+            echo "$DOMAIN 的最佳 IP: $BEST_IP (延迟: $MIN_DELAY ms)"
+        else
+            echo -e "${RED}未找到 $DOMAIN 的可用 IP 地址。${NC}"
+        fi
+    done
+
+    # 更新 /etc/hosts 文件
+    echo "更新 /etc/hosts 文件..."
+    for i in "${!DOMAINS[@]}"; do
+        DOMAIN=${DOMAINS[$i]}
+        IP=${BEST_IPS[$i]}
+        if [ -n "$IP" ]; then
+            # 移除已有的该域名条目
+            sudo sed -i "/$DOMAIN/d" /etc/hosts
+            # 添加新的 IP 和域名映射
+            echo "$IP $DOMAIN" | sudo tee -a /etc/hosts > /dev/null
+        fi
+    done
+
+    echo "/etc/hosts 文件修改完成。"
     # 返回选择页面
     return_to_menu
 }
