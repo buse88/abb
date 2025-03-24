@@ -2,7 +2,7 @@
 
 # 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
-echo -e "版本 V2.5"
+echo -e "版本 V2.8"
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
@@ -218,15 +218,31 @@ modify_host() {
     BEST_IPS=()
     for DOMAIN in "${DOMAINS[@]}"; do
         IP_LIST=""
+        CNAME=""
         # 尝试多个 DNS 服务器解析域名
         for DNS in "${DNS_SERVERS[@]}"; do
             echo -e "${BLUE}尝试使用 DNS $DNS 解析 $DOMAIN...${NC}"
-            IP_LIST=$(dig @"$DNS" +short "$DOMAIN" A | grep -v '\.$')
-            if [ -n "$IP_LIST" ]; then
-                echo -e "${BLUE}解析结果: $IP_LIST${NC}"
+            # 获取完整的 DNS 记录
+            DNS_RESULT=$(dig @"$DNS" "$DOMAIN" A +noall +answer)
+            IP_LIST=$(echo "$DNS_RESULT" | grep -E '^[a-zA-Z0-9]' | awk '{print $5}' | grep -v '\.$')
+            CNAME=$(dig @"$DNS" "$DOMAIN" CNAME +short | grep -v '\.$')
+            if [ -n "$IP_LIST" ] || [ -n "$CNAME" ]; then
+                echo -e "${BLUE}解析结果: IPs=$IP_LIST, CNAME=$CNAME${NC}"
                 break
             fi
         done
+
+        # 如果有 CNAME，进一步解析 CNAME 的 A 记录
+        if [ -n "$CNAME" ] && [ -z "$IP_LIST" ]; then
+            echo -e "${BLUE}检测到 CNAME $CNAME，正在解析其 A 记录...${NC}"
+            for DNS in "${DNS_SERVERS[@]}"; do
+                IP_LIST=$(dig @"$DNS" "$CNAME" A +short | grep -v '\.$')
+                if [ -n "$IP_LIST" ]; then
+                    echo -e "${BLUE}CNAME 解析结果: $IP_LIST${NC}"
+                    break
+                fi
+            done
+        fi
 
         if [ -z "$IP_LIST" ]; then
             echo -e "${RED}未找到 $DOMAIN 的 IP 地址，所有 DNS 服务器均无响应，请检查网络或 DNS 设置。${NC}"
