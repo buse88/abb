@@ -50,7 +50,7 @@ install_v2raya() {
     echo -e "${GREEN}请选择 V2RayA 和 V2Ray 的安装方式：${NC}"
     echo -e "${GREEN}1. 源在线安装${NC}"
     echo -e "${GREEN}2. 本地或 Gitee 安装${NC}"
-    read -p "输入选择的编号 (1/2): " install_method
+    read -p "输入选择的编号 (1/2): " install_method < /dev/tty
 
     if [ "$install_method" == "1" ]; then
         # 在线安装 V2RayA 和 V2Ray
@@ -79,13 +79,13 @@ install_v2raya() {
     fi
 
     # 提示用户完成代理设置
-    read -p "是否已完成代理设置？(输入 'y' 完成): " proxy_setup
+    read -p "是否已完成代理设置？(输入 'y' 完成): " proxy_setup < /dev/tty
     if [ "$proxy_setup" == "y" ]; then
         # 提示用户选择要安装的版本
         echo -e "${GREEN}请选择要安装的版本：${NC}"
         echo -e "${GREEN}1. 5.4${NC}"
         echo -e "${GREEN}2. 6.1${NC}"
-        read -p "输入选择的版本编号 (1/2): " kernel_choice
+        read -p "输入选择的版本编号 (1/2): " kernel_choice < /dev/tty
 
         # 根据用户选择替换 KERNEL=
         if [ "$kernel_choice" == "1" ]; then
@@ -110,7 +110,7 @@ change_sources() {
     echo -e "${GREEN}1. 教育网源${NC}"
     echo -e "${GREEN}2. 阿里云源${NC}"
     echo -e "${GREEN}3. 清华源${NC}"
-    read -p "输入选择的编号 (1/2/3): " source_choice
+    read -p "输入选择的编号 (1/2/3): " source_choice < /dev/tty
 
     # 定义不同源的 URL
     case "$source_choice" in
@@ -167,7 +167,7 @@ uninstall_v2raya() {
     sudo rm -rf ~/.config/v2ray
     sudo apt update
     echo "卸载完成。"
-    echo "请手动删除脚本文件 f（如果需要）。"
+    echo "请手动删除脚本文件（如果需要）。"
 }
 
 # 修改 HOST 的函数
@@ -231,8 +231,8 @@ install_docker() {
     default_mirrors='"https://registry.docker-cn.com","https://docker.mirrors.ustc.edu.cn"'
 
     # 提示用户输入 Docker 反向代理地址
-    echo -n "请输入 Docker 代理地址，末尾带上 /（如果有多个，用逗号分隔），或按 Enter 使用默认值: "
-    read registry_mirrors
+    echo -n "请输入 Docker 代理地址，末尾带上 /（如果有多个，用逗号分隔），或按 Enter 使用默认值: " < /dev/tty
+    read registry_mirrors < /dev/tty
 
     if [ -z "$registry_mirrors" ]; then
         formatted_mirrors=$default_mirrors
@@ -259,7 +259,7 @@ install_srt() {
     echo -e "${GREEN}请选择要安装的版本：${NC}"
     echo -e "${GREEN}1. 5.4${NC}"
     echo -e "${GREEN}2. 6.1${NC}"
-    read -p "输入选择的版本编号 (1/2): " kernel_choice
+    read -p "输入选择的版本编号 (1/2): " kernel_choice < /dev/tty
 
     if [ "$kernel_choice" == "1" ]; then
         kernel_version="5.4"
@@ -298,11 +298,6 @@ install_srs() {
     return_to_menu
 }
 
-# 检测脚本是否通过管道运行
-is_piped() {
-    [ -t 0 ] && return 1 || return 0
-}
-
 # 返回主菜单的函数
 return_to_menu() {
     echo -e "${GREEN}请选择操作：${NC}"
@@ -313,7 +308,7 @@ return_to_menu() {
     echo -e "${GREEN}5. 安装 V2RayA${NC}"
     echo -e "${GREEN}6. 卸载 V2RayA${NC}"
     echo -e "${GREEN}0. 退出${NC}"
-    read -p "输入选择的编号 (0-6): " choice
+    read -p "输入选择的编号 (0-6): " choice < /dev/tty
 
     case "$choice" in
         1)
@@ -346,23 +341,4 @@ return_to_menu() {
 }
 
 # 启动脚本并显示主菜单
-if is_piped; then
-    # 通过管道运行时，提示用户正确的执行方式
-    echo -e "${RED}检测到通过管道执行脚本。${NC}"
-    echo -e "${RED}此脚本含有交互式操作，无法通过管道正常运行。${NC}"
-    echo -e "${GREEN}请使用以下命令在 Debian 系统上正确运行此脚本：${NC}"
-    echo ""
-    echo -e "${BLUE}方法1: 下载后执行${NC}"
-    echo -e "wget -O setup.sh https://your-script-url"
-    echo -e "chmod +x setup.sh"
-    echo -e "./setup.sh"
-    echo ""
-    echo -e "${BLUE}方法2: 使用 bash 直接执行${NC}"
-    echo -e "wget -O setup.sh https://your-script-url && bash setup.sh"
-    echo ""
-    echo -e "${RED}注意：请将上述命令中的 URL 替换为实际的脚本 URL${NC}"
-    exit 1
-else
-    # 非管道方式运行，正常显示交互式菜单
-    return_to_menu
-fi
+return_to_menu
