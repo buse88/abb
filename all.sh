@@ -2,13 +2,20 @@
 
 # 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
-echo -e "版本 V3.0"
+echo -e "版本 V3.1"
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
 BLUE='\033[0;34m'   # 蓝色
 YELLOW='\033[0;33m' # 黄色
 NC='\033[0m'        # 无颜色（RESET）
+
+# 检查是否通过管道运行
+if [ -t 0 ]; then
+    INTERACTIVE=1  # 终端模式
+else
+    INTERACTIVE=0  # 管道模式
+fi
 
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
@@ -49,10 +56,15 @@ check_architecture_and_download() {
 # 安装 V2RayA 的函数
 install_v2raya() {
     echo -e "${RED}----------V2和Host 二选一即可，不用都安装----------${NC}"
-    echo -e "${GREEN}请选择 V2RayA 和 V2Ray 的安装方式：${NC}"
-    echo -e "${GREEN}1. 源在线安装${NC}"
-    echo -e "${GREEN}2. 本地或 Gitee 安装${NC}"
-    read -p "输入选择的编号 (1/2): " install_method < /dev/tty
+    if [ "$INTERACTIVE" -eq 1 ]; then
+        echo -e "${GREEN}请选择 V2RayA 和 V2Ray 的安装方式：${NC}"
+        echo -e "${GREEN}1. 源在线安装${NC}"
+        echo -e "${GREEN}2. 本地或 Gitee 安装${NC}"
+        read -p "输入选择的编号 (1/2): " install_method < /dev/tty
+    else
+        echo -e "${YELLOW}管道模式下，默认选择源在线安装 (1)${NC}"
+        install_method=1
+    fi
 
     if [ "$install_method" == "1" ]; then
         # 在线安装 V2RayA 和 V2Ray
@@ -80,14 +92,25 @@ install_v2raya() {
         return
     fi
 
-    # 提示用户完成代理设置
-    read -p "是否已完成代理设置？(输入 'y' 完成): " proxy_setup < /dev/tty
+    if [ "$INTERACTIVE" -eq 1 ]; then
+        # 提示用户完成代理设置
+        read -p "是否已完成代理设置？(输入 'y' 完成): " proxy_setup < /dev/tty
+    else
+        echo -e "${YELLOW}管道模式下，默认跳过代理设置${NC}"
+        proxy_setup="n"
+    fi
+
     if [ "$proxy_setup" == "y" ]; then
-        # 提示用户选择要安装的版本
-        echo -e "${GREEN}请选择要安装的版本：${NC}"
-        echo -e "${GREEN}1. 5.4${NC}"
-        echo -e "${GREEN}2. 6.1${NC}"
-        read -p "输入选择的版本编号 (1/2): " kernel_choice < /dev/tty
+        if [ "$INTERACTIVE" -eq 1 ]; then
+            # 提示用户选择要安装的版本
+            echo -e "${GREEN}请选择要安装的版本：${NC}"
+            echo -e "${GREEN}1. 5.4${NC}"
+            echo -e "${GREEN}2. 6.1${NC}"
+            read -p "输入选择的版本编号 (1/2): " kernel_choice < /dev/tty
+        else
+            echo -e "${YELLOW}管道模式下，默认选择版本 6.1 (2)${NC}"
+            kernel_choice=2
+        fi
 
         # 根据用户选择替换 KERNEL=
         if [ "$kernel_choice" == "1" ]; then
@@ -108,11 +131,16 @@ install_v2raya() {
 
 # 更换软件源的函数
 change_sources() {
-    echo -e "${GREEN}请选择要更换的软件源：${NC}"
-    echo -e "${GREEN}1. 教育网源${NC}"
-    echo -e "${GREEN}2. 阿里云源${NC}"
-    echo -e "${GREEN}3. 清华源${NC}"
-    read -p "输入选择的编号 (1/2/3): " source_choice < /dev/tty
+    if [ "$INTERACTIVE" -eq 1 ]; then
+        echo -e "${GREEN}请选择要更换的软件源：${NC}"
+        echo -e "${GREEN}1. 教育网源${NC}"
+        echo -e "${GREEN}2. 阿里云源${NC}"
+        echo -e "${GREEN}3. 清华源${NC}"
+        read -p "输入选择的编号 (1/2/3): " source_choice < /dev/tty
+    else
+        echo -e "${YELLOW}管道模式下，默认选择阿里云源 (2)${NC}"
+        source_choice=2
+    fi
 
     # 定义不同源的 URL
     case "$source_choice" in
@@ -209,7 +237,7 @@ modify_host() {
     fi
 
     echo -e "${YELLOW}正在更新 GitHub 的 IP 地址...${NC}"
-    # 从 GitHub API 获取 IP 地址（使用 .web[] 替代 .git[]，因为 .git[] 是 Git 协议相关 IP）
+    # 从 GitHub API 获取 IP 地址
     GITHUB_IPS=$(curl -s https://api.github.com/meta | jq -r '.web[]')
     if [[ -z "$GITHUB_IPS" ]]; then
         echo -e "${RED}无法获取 GitHub 最新 IP，跳过更新 /etc/hosts${NC}"
@@ -268,9 +296,14 @@ install_docker() {
     # 提供默认的 Docker 镜像源
     default_mirrors='"https://registry.docker-cn.com","https://docker.mirrors.ustc.edu.cn"'
 
-    # 提示用户输入 Docker 反向代理地址
-    echo -n "请输入 Docker 代理地址，末尾带上 /（如果有多个，用逗号分隔），或按 Enter 使用默认值: " < /dev/tty
-    read registry_mirrors < /dev/tty
+    if [ "$INTERACTIVE" -eq 1 ]; then
+        # 提示用户输入 Docker 反向代理地址
+        echo -n "请输入 Docker 代理地址，末尾带上 /（如果有多个，用逗号分隔），或按 Enter 使用默认值: " < /dev/tty
+        read registry_mirrors < /dev/tty
+    else
+        echo -e "${YELLOW}管道模式下，使用默认 Docker 镜像源${NC}"
+        registry_mirrors=""
+    fi
 
     if [ -z "$registry_mirrors" ]; then
         formatted_mirrors=$default_mirrors
@@ -294,10 +327,15 @@ EOF
 
 # 安装 SRT 的函数
 install_srt() {
-    echo -e "${GREEN}请选择要安装的版本：${NC}"
-    echo -e "${GREEN}1. 5.4${NC}"
-    echo -e "${GREEN}2. 6.1${NC}"
-    read -p "输入选择的版本编号 (1/2): " kernel_choice < /dev/tty
+    if [ "$INTERACTIVE" -eq 1 ]; then
+        echo -e "${GREEN}请选择要安装的版本：${NC}"
+        echo -e "${GREEN}1. 5.4${NC}"
+        echo -e "${GREEN}2. 6.1${NC}"
+        read -p "输入选择的版本编号 (1/2): " kernel_choice < /dev/tty
+    else
+        echo -e "${YELLOW}管道模式下，默认选择版本 6.1 (2)${NC}"
+        kernel_choice=2
+    fi
 
     if [ "$kernel_choice" == "1" ]; then
         kernel_version="5.4"
@@ -338,15 +376,20 @@ install_srs() {
 
 # 返回主菜单的函数
 return_to_menu() {
-    echo -e "${GREEN}请选择操作：${NC}"
-    echo -e "${GREEN}1. 更换软件源${NC}"
-    echo -e "${GREEN}2. 修改 HOST${NC}"
-    echo -e "${GREEN}3. 安装 SRT${NC}"
-    echo -e "${GREEN}4. 安装 SRS (Docker 版)${NC}"
-    echo -e "${GREEN}5. 安装 V2RayA${NC}"
-    echo -e "${GREEN}6. 卸载 V2RayA${NC}"
-    echo -e "${GREEN}0. 退出${NC}"
-    read -p "输入选择的编号 (0-6): " choice < /dev/tty
+    if [ "$INTERACTIVE" -eq 1 ]; then
+        echo -e "${GREEN}请选择操作：${NC}"
+        echo -e "${GREEN}1. 更换软件源${NC}"
+        echo -e "${GREEN}2. 修改 HOST${NC}"
+        echo -e "${GREEN}3. 安装 SRT${NC}"
+        echo -e "${GREEN}4. 安装 SRS (Docker 版)${NC}"
+        echo -e "${GREEN}5. 安装 V2RayA${NC}"
+        echo -e "${GREEN}6. 卸载 V2RayA${NC}"
+        echo -e "${GREEN}0. 退出${NC}"
+        read -p "输入选择的编号 (0-6): " choice < /dev/tty
+    else
+        echo -e "${YELLOW}管道模式下，默认执行修改 HOST (2)，完成后退出${NC}"
+        choice=2
+    fi
 
     case "$choice" in
         1)
@@ -376,6 +419,12 @@ return_to_menu() {
             return_to_menu
             ;;
     esac
+
+    # 在管道模式下，执行一次后退出
+    if [ "$INTERACTIVE" -eq 0 ]; then
+        echo "管道模式执行完成，退出。"
+        exit 0
+    fi
 }
 
 # 启动脚本并显示主菜单
