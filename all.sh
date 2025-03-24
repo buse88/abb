@@ -2,7 +2,7 @@
 
 # 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
-echo -e "版本 V2.2"
+echo -e "版本 V2.3"
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
@@ -195,35 +195,27 @@ modify_host() {
         echo -e "${GREEN}curl 安装成功，继续执行...${NC}"
     fi
 
-    # 检查并安装 jq 工具（用于解析 JSON）
-    if ! command -v jq &> /dev/null; then
-        echo -e "${RED}未检测到 jq，正在安装...${NC}"
+    # 检查并安装 dig（dnsutils 包，如果未安装）
+    if ! command -v dig &> /dev/null; then
+        echo -e "${RED}未检测到 dig，正在安装 dnsutils...${NC}"
         sudo apt update
-        sudo apt install -y jq
+        sudo apt install -y dnsutils
         if [ $? -ne 0 ]; then
-            echo -e "${RED}安装 jq 失败，请手动安装 jq 后重试。${NC}"
+            echo -e "${RED}安装 dnsutils 失败，请手动安装 dnsutils 后重试。${NC}"
             return
         fi
-        echo -e "${GREEN}jq 安装成功，继续执行...${NC}"
+        echo -e "${GREEN}dnsutils 安装成功，继续执行...${NC}"
     fi
 
     # 定义 GitHub 域名列表
     DOMAINS=("github.com" "api.github.com" "raw.githubusercontent.com" "assets-cdn.github.com")
 
-    # 获取 GitHub API 响应
-    echo "获取 GitHub API 响应..."
-    META_JSON=$(curl -s https://api.github.com/meta)
-    if [ -z "$META_JSON" ]; then
-        echo -e "${RED}无法获取 GitHub API 响应，请检查网络连接。${NC}"
-        return
-    fi
-
-    # 解析 JSON 并测试每个域名的最佳 IP
-    echo "测试 IP 地址并选择最佳 IP..."
+    # 解析域名并测试最佳 IP
+    echo "解析域名并选择最佳 IP..."
     BEST_IPS=()
     for DOMAIN in "${DOMAINS[@]}"; do
-        # 从 API 响应中提取该域名的 IP 地址列表
-        IP_LIST=$(echo "$META_JSON" | jq -r --arg domain "$DOMAIN" '.web[] | select(.hostname == $domain) | .ip // empty')
+        # 使用 dig 解析域名，获取 IP 地址列表
+        IP_LIST=$(dig +short "$DOMAIN" A | grep -v '\.$')
         if [ -z "$IP_LIST" ]; then
             echo -e "${RED}未找到 $DOMAIN 的 IP 地址。${NC}"
             continue
