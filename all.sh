@@ -2,7 +2,7 @@
 
 # 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
-echo -e "版本 V2.3"
+echo -e "版本 V2.4"
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
@@ -214,10 +214,10 @@ modify_host() {
     echo "解析域名并选择最佳 IP..."
     BEST_IPS=()
     for DOMAIN in "${DOMAINS[@]}"; do
-        # 使用 dig 解析域名，获取 IP 地址列表
-        IP_LIST=$(dig +short "$DOMAIN" A | grep -v '\.$')
+        # 使用 dig 解析域名，获取 IP 地址列表，使用 Google DNS (8.8.8.8)
+        IP_LIST=$(dig @8.8.8.8 +short "$DOMAIN" A | grep -v '\.$')
         if [ -z "$IP_LIST" ]; then
-            echo -e "${RED}未找到 $DOMAIN 的 IP 地址。${NC}"
+            echo -e "${RED}未找到 $DOMAIN 的 IP 地址，请检查网络或 DNS 设置。${NC}"
             continue
         fi
 
@@ -225,6 +225,10 @@ modify_host() {
         BEST_IP=""
         MIN_DELAY=999999
         for IP in $IP_LIST; do
+            # 排除无效 IP（如 0.0.0.0）
+            if [ "$IP" = "0.0.0.0" ]; then
+                continue
+            fi
             DELAY=$(ping -c 1 -w 2 "$IP" | grep 'time=' | awk -F'time=' '{print $2}' | awk '{print $1}')
             if [ -n "$DELAY" ] && (( $(echo "$DELAY < $MIN_DELAY" | bc -l) )); then
                 MIN_DELAY=$DELAY
@@ -236,7 +240,7 @@ modify_host() {
             BEST_IPS+=("$BEST_IP")
             echo "$DOMAIN 的最佳 IP: $BEST_IP (延迟: $MIN_DELAY ms)"
         else
-            echo -e "${RED}未找到 $DOMAIN 的可用 IP 地址。${NC}"
+            echo -e "${RED}未找到 $DOMAIN 的可用 IP 地址，可能无法 ping 通。${NC}"
         fi
     done
 
@@ -249,7 +253,7 @@ modify_host() {
             # 移除已有的该域名条目
             sudo sed -i "/$DOMAIN/d" /etc/hosts
             # 添加新的 IP 和域名映射
-            echo "$IP $DOMAIN" | sudo tee -a /etc/hosts > /dev/null
+            echo "$IP $ AssetsDOMAIN" | sudo tee -a /etc/hosts > /dev/null
         fi
     done
 
