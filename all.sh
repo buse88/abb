@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 只在debian12 adm64机器测试，功能有v2，host，srt，srs，docker在CN网络安装
+# 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
@@ -8,18 +8,14 @@ GREEN='\033[0;32m'  # 绿色
 BLUE='\033[0;34m'   # 蓝色
 NC='\033[0m'        # 无颜色
 
-# 提示用户选择操作前的颜色提示
-
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
-    echo -e "${RED}检测到 DNS 解析错误，正在修复...${NC}"
-    if ! grep -q "nameserver 8.8.8.8" /etc/resolv.conf; then
-        echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf
-    fi
-    if ! grep -q "nameserver 8.8.4.4" /etc/resolv.conf; then
-        echo "nameserver 8.8.4.4" | sudo tee -a /etc/resolv.conf
-    fi
-    echo -e "${GREEN}DNS 解析错误已修复，继续执行...${NC}"
+    echo -e "${RED}检测到 DNS 解析错误，请检查网络连接和 DNS 设置。${NC}"
+    echo -e "${RED}您可以尝试手动将 DNS 服务器设置为 8.8.8.8 或 114.114.114.114。${NC}"
+    echo -e "${RED}例如，编辑 /etc/resolv.conf 并添加：${NC}"
+    echo -e "${RED}nameserver 8.8.8.8${NC}"
+    echo -e "${RED}nameserver 114.114.114.114${NC}"
+    exit 1
 }
 
 # 封装 curl 和 wget 命令，自动处理 DNS 解析错误并重试
@@ -28,7 +24,6 @@ execute_command() {
     eval "$cmd"
     if [ $? -ne 0 ]; then
         resolve_dns_issue
-        eval "$cmd"
     fi
 }
 
@@ -37,12 +32,12 @@ check_architecture_and_download() {
     ARCH=$(uname -m)
     if [ "$ARCH" == "x86_64" ]; then
         echo "检测到系统架构为 amd64"
-        execute_command "wget -P /opt https://gitee.com/t88t/test/releases/download/v2/installer_debian_amdx64_2.2.5.5.deb"
-        execute_command "wget -P /opt https://gitee.com/t88t/test/releases/download/v2/v2ray-linux-amd64.zip"
+        execute_command "wget -P /tmp https://gitee.com/t88t/test/releases/download/v2/installer_debian_amdx64_2.2.5.5.deb"
+        execute_command "wget -P /tmp https://gitee.com/t88t/test/releases/download/v2/v2ray-linux-amd64.zip"
     elif [ "$ARCH" == "aarch64" ]; then
         echo "检测到系统架构为 arm64"
-        execute_command "wget -P /opt https://gitee.com/t88t/test/releases/download/v2/installer_debian_arm64_2.2.5.5.deb"
-        execute_command "wget -P /opt https://gitee.com/t88t/test/releases/download/v2/v2ray-linux-arm64-v8a.zip"
+        execute_command "wget -P /tmp https://gitee.com/t88t/test/releases/download/v2/installer_debian_arm64_2.2.5.5.deb"
+        execute_command "wget -P /tmp https://gitee.com/t88t/test/releases/download/v2/v2ray-linux-arm64-v8a.zip"
     else
         echo -e "${RED}未支持的系统架构: $ARCH${NC}"
         exit 1
@@ -54,7 +49,7 @@ install_v2raya() {
     echo -e "${RED}----------V2和Host 二选一即可，不用都安装----------${NC}"
     echo -e "${GREEN}请选择 V2RayA 和 V2Ray 的安装方式：${NC}"
     echo -e "${GREEN}1. 源在线安装${NC}"
-    echo -e "${GREEN}2. 本地或giee安装${NC}"
+    echo -e "${GREEN}2. 本地或 Gitee 安装${NC}"
     read -p "输入选择的编号 (1/2): " install_method
 
     if [ "$install_method" == "1" ]; then
@@ -68,17 +63,15 @@ install_v2raya() {
         echo "安装完成。"
     elif [ "$install_method" == "2" ]; then
         # 本地安装 V2RayA 和 V2Ray
-        echo "若是本地安装先把deb文件跟rar文件放入/opt目录"
+        echo "若是本地安装，请先将 deb 文件和 zip 文件放入 /tmp 目录"
         check_architecture_and_download
-        sudo apt install -y /opt/installer_debian_amdx64_2.2.5.5.deb
-        cp /opt/v2ray-linux-amd64.zip /tmp
-        pushd /tmp
-        unzip v2ray-linux-amd64.zip -d ./v2ray
-        mkdir -p /usr/local/share/v2ray && cp ./v2ray/*dat /usr/local/share/v2ray
-        install -Dm755 ./v2ray/v2ray /usr/local/bin/v2ray
-        rm -rf ./v2ray v2ray-linux-amd64.zip
+        sudo apt install -y /tmp/installer_debian_amdx64_2.2.5.5.deb
+        unzip /tmp/v2ray-linux-amd64.zip -d /tmp/v2ray
+        sudo mkdir -p /usr/local/share/v2ray
+        sudo cp /tmp/v2ray/*dat /usr/local/share/v2ray
+        sudo install -Dm755 /tmp/v2ray/v2ray /usr/local/bin/v2ray
+        sudo rm -rf /tmp/v2ray /tmp/v2ray-linux-amd64.zip
         sudo systemctl start v2raya.service
-        popd
         echo "本地安装完成。"
     else
         echo "无效的选择。请重新运行脚本并选择 1 或 2。"
@@ -112,7 +105,6 @@ install_v2raya() {
 }
 
 # 更换软件源的函数
-# 更换软件源的函数
 change_sources() {
     echo -e "${GREEN}请选择要更换的软件源：${NC}"
     echo -e "${GREEN}1. 教育网源${NC}"
@@ -120,7 +112,7 @@ change_sources() {
     echo -e "${GREEN}3. 清华源${NC}"
     read -p "输入选择的编号 (1/2/3): " source_choice
 
-    # 定义不同源的URL
+    # 定义不同源的 URL
     case "$source_choice" in
         1)
             NEW_SOURCES_URL="https://gitee.com/t88t/test/raw/master/debian12-edu-sources.list"
@@ -147,13 +139,7 @@ change_sources() {
 
     # 下载新的 sources.list
     echo "正在下载新的 sources.list..."
-    wget -O /tmp/debian-sources.list "$NEW_SOURCES_URL"
-
-    # 检查下载是否成功
-    if [ $? -ne 0 ]; then
-        echo "下载新的 sources.list 失败，请检查 URL 是否正确。"
-        exit 1
-    fi
+    execute_command "wget -O /tmp/debian-sources.list $NEW_SOURCES_URL"
 
     # 替换当前的 sources.list
     echo "正在替换当前的 sources.list..."
@@ -167,14 +153,13 @@ change_sources() {
     return_to_menu
 }
 
-
 # 卸载 V2RayA 的函数
 uninstall_v2raya() {
     echo "正在卸载 V2RayA 和 V2Ray..."
     sudo systemctl stop v2raya.service
     sudo apt remove --purge -y v2raya v2ray
-    sudo rm /etc/apt/sources.list.d/v2raya.list
-    sudo rm /etc/apt/keyrings/v2raya.asc
+    sudo rm -f /etc/apt/sources.list.d/v2raya.list
+    sudo rm -f /etc/apt/keyrings/v2raya.asc
     sudo rm -rf /etc/v2raya
     sudo rm -rf /etc/v2ray
     sudo rm -rf /usr/local/etc/v2ray
@@ -182,58 +167,34 @@ uninstall_v2raya() {
     sudo rm -rf ~/.config/v2ray
     sudo apt update
     echo "卸载完成。"
-    echo "删除脚本自身..."
-    rm -- "$0"
+    echo "请手动删除脚本文件 f（如果需要）。"
 }
 
+# 修改 HOST 的函数
 modify_host() {
-    # 备份 /etc/hosts 文件
     echo -e "${RED}----------提示：V2和Host 二选一即可，不用都安装----------${NC}"
     if [ ! -f /etc/host_back ]; then
         sudo cp /etc/hosts /etc/host_back
-        echo "Backup created: /etc/host_back"
+        echo "备份创建: /etc/host_back"
     else
-        echo "Backup already exists: /etc/host_back"
+        echo "备份已存在: /etc/host_back"
     fi
 
     # 修改 /etc/hosts 文件
-    # 检查是否已安装at命令
-    if ! command -v curl &> /dev/null; then
-           echo -e "${RED}检测到 没有安装curl，正在安装...${NC}"
-        echo "安装 at 命令..."
-        sudo apt-get install -y curl
-    fi
     execute_command "sudo sh -c 'sed -i \"/# GitHub520 Host Start/Q\" /etc/hosts && curl https://raw.hellogithub.com/hosts >> /etc/hosts'"
     echo "/etc/hosts 文件修改完成..."
-    
-
-    # 创建定时任务文件
-    local cron_file="/tmp/cron_job"
-    local cron_job="0 * * * * /usr/bin/curl -s https://raw.hellogithub.com/hosts >> /etc/hosts; echo \$(date) >> /tmp/cron_count.txt"
-
-    # 清理任何已有的定时任务
-    (crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)
 
     # 设置定时任务
-    echo "$cron_job" > $cron_file
-    crontab $cron_file
-
+    local cron_job="0 * * * * /usr/bin/curl -s https://raw.hellogithub.com/hosts >> /etc/hosts; echo \$(date) >> /tmp/cron_count.txt"
+    (crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)
+    echo "$cron_job" | crontab -
     echo -e "${GREEN}定时任务已设置，每小时运行一次，总共更新2次host后，自动关闭更新。${NC}"
-
-    # 检查是否已安装at命令
-    if ! command -v at &> /dev/null; then
-           echo -e "${RED}检测到 没有安装at，正在安装...${NC}"
-        echo "安装 at 命令..."
-        sudo apt-get install -y at
-    fi
 
     # 使用 at 命令在 2 小时后移除定时任务
     echo '(crontab -l 2>/dev/null | grep -v "curl -s https://raw.hellogithub.com/hosts" | crontab -)' | at now + 2 hours
-
     # 返回选择页面
     return_to_menu
 }
-
 
 # 安装 Docker 的函数
 install_docker() {
@@ -244,17 +205,16 @@ install_docker() {
     sudo apt install -y curl software-properties-common
 
     echo "添加官方密钥..."
-    curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/debian/gpg?spm=a2c6h.25603864.0.0.6c6c655f03u3cp | sudo apt-key add -
+    execute_command "curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/debian/gpg | sudo apt-key add -"
 
     echo "安装 Docker 源镜像..."
-    sudo add-apt-repository -y "https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
+    sudo add-apt-repository -y "deb [arch=amd64] https://mirrors.ustc.edu.cn/docker-ce/linux/debian $(lsb_release -cs) stable"
 
     echo "安装 Docker 与 Docker Compose..."
     sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose
 
     echo "启动 Docker..."
     sudo systemctl start docker
-    # 查看 Docker 启动情况
     sudo systemctl status docker
 
     echo "设置开机启动 Docker..."
@@ -265,25 +225,32 @@ install_docker() {
     docker-compose version
 
     # 创建目录（如果不存在） /etc/docker/daemon.json
-    sudo mkdir -p /etc/docker  
+    sudo mkdir -p /etc/docker
+
+    # 提供默认的 Docker 镜像源
+    default_mirrors='"https://registry.docker-cn.com","https://docker.mirrors.ustc.edu.cn"'
 
     # 提示用户输入 Docker 反向代理地址
-    echo -n "请输入 Docker 代理地址，末尾带上 /（如果有多个，用逗号分隔）: "
+    echo -n "请输入 Docker 代理地址，末尾带上 /（如果有多个，用逗号分隔），或按 Enter 使用默认值: "
     read registry_mirrors
 
-    # 处理用户输入，确保每个地址都带有双引号
-    IFS=',' read -ra ADDR <<< "$registry_mirrors"
-    formatted_mirrors=$(printf '"%s",' "${ADDR[@]}")
-    formatted_mirrors=${formatted_mirrors%,} # 去掉最后一个逗号
+    if [ -z "$registry_mirrors" ]; then
+        formatted_mirrors=$default_mirrors
+    else
+        # 处理用户输入，确保每个地址都带有双引号
+        IFS=',' read -ra ADDR <<< "$registry_mirrors"
+        formatted_mirrors=$(printf '"%s",' "${ADDR[@]}")
+        formatted_mirrors=${formatted_mirrors%,} # 去掉最后一个逗号
+    fi
 
     # 将用户输入写入 daemon.json 文件
     sudo tee /etc/docker/daemon.json <<-EOF
     {
-      "registry-mirrors": [${formatted_mirrors}]  
-      } 
+      "registry-mirrors": [$formatted_mirrors]
+    }
 EOF
 
-    sudo systemctl daemon-reload  
+    sudo systemctl daemon-reload
     sudo systemctl restart docker
 }
 
@@ -305,8 +272,7 @@ install_srt() {
 
     execute_command "wget -O - https://www.openmptcprouter.com/server/debian-x86_64.sh | KERNEL=\"$kernel_version\" sh"
     echo "看到这个才安装成功 You need to reboot to enable MPTCP, shadowsocks, glorytun and shorewall"
-    echo "若安装成功，请重启服务器，重启后ssh端口为：65222"
-    
+    echo "若安装成功，请重启服务器，重启后 ssh 端口为：65222"
 }
 
 # 安装 SRS 的函数
@@ -323,7 +289,7 @@ install_srs() {
       ossrs/oryx:5
 
     if [ $? -eq 0 ]; then
-        echo "SRS 安装并启动成功。后台地址http://ip:2021 "
+        echo "SRS 安装并启动成功。后台地址 http://ip:2021"
     else
         echo -e "${RED}SRS 安装或启动失败。${NC}"
     fi
@@ -343,19 +309,18 @@ return_to_menu() {
     echo -e "${GREEN}1. 更换软件源${NC}"
     echo -e "${GREEN}2. 修改 HOST${NC}"
     echo -e "${GREEN}3. 安装 SRT${NC}"
-    echo -e "${GREEN}4. 安装 SRS(docker版)${NC}"
-    echo -e "${GREEN}5. 安装 V2${NC}"
-    echo -e "${GREEN}6. 卸载 V2${NC}"
+    echo -e "${GREEN}4. 安装 SRS (Docker 版)${NC}"
+    echo -e "${GREEN}5. 安装 V2RayA${NC}"
+    echo -e "${GREEN}6. 卸载 V2RayA${NC}"
     echo -e "${GREEN}0. 退出${NC}"
     read -p "输入选择的编号 (0-6): " choice
-
 
     case "$choice" in
         1)
             change_sources
             ;;
         2)
-             modify_host
+            modify_host
             ;;
         3)
             install_srt
@@ -385,17 +350,17 @@ if is_piped; then
     # 通过管道运行时，提示用户正确的执行方式
     echo -e "${RED}检测到通过管道执行脚本。${NC}"
     echo -e "${RED}此脚本含有交互式操作，无法通过管道正常运行。${NC}"
-    echo -e "${GREEN}请使用以下命令在Debian系统上正确运行此脚本：${NC}"
+    echo -e "${GREEN}请使用以下命令在 Debian 系统上正确运行此脚本：${NC}"
     echo ""
     echo -e "${BLUE}方法1: 下载后执行${NC}"
     echo -e "wget -O setup.sh https://your-script-url"
     echo -e "chmod +x setup.sh"
     echo -e "./setup.sh"
     echo ""
-    echo -e "${BLUE}方法2: 使用bash直接执行${NC}"
+    echo -e "${BLUE}方法2: 使用 bash 直接执行${NC}"
     echo -e "wget -O setup.sh https://your-script-url && bash setup.sh"
     echo ""
-    echo -e "${RED}注意：请将上述命令中的URL替换为实际的脚本URL${NC}"
+    echo -e "${RED}注意：请将上述命令中的 URL 替换为实际的脚本 URL${NC}"
     exit 1
 else
     # 非管道方式运行，正常显示交互式菜单
