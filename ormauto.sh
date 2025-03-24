@@ -11,6 +11,17 @@ GREEN='\033[0;32m'  # 绿色
 BLUE='\033[0;34m'   # 蓝色
 NC='\033[0m'        # 无颜色
 
+# 检查是否通过管道执行
+if [ -t 0 ]; then
+    # 直接执行
+    echo -e "${GREEN}检测到直接执行模式${NC}"
+else
+    # 管道执行
+    echo -e "${GREEN}检测到管道执行模式${NC}"
+    # 确保标准输入可用
+    exec 0</dev/tty
+fi
+
 # 如果没有参数，显示交互式菜单
 if [ $# -eq 0 ]; then
     echo -e "${GREEN}请选择操作：${NC}"
@@ -221,4 +232,4 @@ if [ "$SRS" = true ]; then
       ossrs/oryx:5
 fi
 
-echo "所有操作已完成。"
+echo "所有操作已完成。" 
