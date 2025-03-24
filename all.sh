@@ -2,7 +2,7 @@
 
 # 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
-echo -e "版本 V2.8"
+echo -e "版本 V2.9"
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
@@ -12,10 +12,10 @@ NC='\033[0m'        # 无颜色
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
     echo -e "${RED}检测到 DNS 解析错误，请检查网络连接和 DNS 设置。${NC}"
-    echo -e "${RED}您可以尝试手动将 DNS 服务器设置为 8.8.8.8 或 114.114.114.114。${NC}"
+    echo -e "${RED}您可以尝试手动将 DNS 服务器设置为 223.5.5.5 或 119.29.29.29。${NC}"
     echo -e "${RED}例如，编辑 /etc/resolv.conf 并添加：${NC}"
-    echo -e "${RED}nameserver 8.8.8.8${NC}"
-    echo -e "${RED}nameserver 114.114.114.114${NC}"
+    echo -e "${RED}nameserver 223.5.5.5${NC}"
+    echo -e "${RED}nameserver 119.29.29.29${NC}"
     exit 1
 }
 
@@ -210,8 +210,8 @@ modify_host() {
     # 定义 GitHub 域名列表
     DOMAINS=("github.com" "api.github.com" "raw.githubusercontent.com" "assets-cdn.github.com")
 
-    # 定义备选 DNS 服务器
-    DNS_SERVERS=("8.8.8.8" "1.1.1.1" "114.114.114.114")
+    # 定义备选 DNS 服务器，优先使用国内 DNS
+    DNS_SERVERS=("223.5.5.5" "119.29.29.29" "114.114.114.114" "8.8.8.8" "1.1.1.1")
 
     # 解析域名并测试最佳 IP
     echo "解析域名并选择最佳 IP..."
@@ -223,9 +223,9 @@ modify_host() {
         for DNS in "${DNS_SERVERS[@]}"; do
             echo -e "${BLUE}尝试使用 DNS $DNS 解析 $DOMAIN...${NC}"
             # 获取完整的 DNS 记录
-            DNS_RESULT=$(dig @"$DNS" "$DOMAIN" A +noall +answer)
+            DNS_RESULT=$(dig @"$DNS" "$DOMAIN" A +noall +answer 2>/dev/null)
             IP_LIST=$(echo "$DNS_RESULT" | grep -E '^[a-zA-Z0-9]' | awk '{print $5}' | grep -v '\.$')
-            CNAME=$(dig @"$DNS" "$DOMAIN" CNAME +short | grep -v '\.$')
+            CNAME=$(dig @"$DNS" "$DOMAIN" CNAME +short 2>/dev/null | grep -v '\.$')
             if [ -n "$IP_LIST" ] || [ -n "$CNAME" ]; then
                 echo -e "${BLUE}解析结果: IPs=$IP_LIST, CNAME=$CNAME${NC}"
                 break
@@ -233,10 +233,11 @@ modify_host() {
         done
 
         # 如果有 CNAME，进一步解析 CNAME 的 A 记录
-        if [ -n "$CNAME" ] && [ -z "$IP_LIST" ]; then
+        if [ -n "$CNAME" ] && [ -z "$IP_LIST" ] && ! echo "$CNAME" | grep -q "communications error"; then
             echo -e "${BLUE}检测到 CNAME $CNAME，正在解析其 A 记录...${NC}"
             for DNS in "${DNS_SERVERS[@]}"; do
-                IP_LIST=$(dig @"$DNS" "$CNAME" A +short | grep -v '\.$')
+                DNS_RESULT=$(dig @"$DNS" "$CNAME" A +noall +answer 2>/dev/null)
+                IP_LIST=$(echo "$DNS_RESULT" | grep -E '^[a-zA-Z0-9]' | awk '{print $5}' | grep -v '\.$')
                 if [ -n "$IP_LIST" ]; then
                     echo -e "${BLUE}CNAME 解析结果: $IP_LIST${NC}"
                     break
