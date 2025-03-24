@@ -5,22 +5,33 @@
 # curl -s https://raw.githubusercontent.com/your-repo/all.sh | bash -s -- -s edu -h -v2 -d -srt 5.4 -srs
 # 或者直接执行显示菜单：wget -qO- https://raw.githubusercontent.com/your-repo/all_pipe.sh | bash
 
+# 强制输出缓冲
+unset IFS
+set -e
+set -o pipefail
+
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
 BLUE='\033[0;34m'   # 蓝色
 NC='\033[0m'        # 无颜色
 
+# 调试输出函数
+debug_output() {
+    echo -e "${BLUE}[DEBUG] $1${NC}" >&2
+}
+
 # 检查是否通过管道执行
 if [ -t 0 ]; then
-    # 直接执行
-    echo -e "${GREEN}检测到直接执行模式${NC}"
+    debug_output "检测到直接执行模式"
 else
-    # 管道执行
-    echo -e "${GREEN}检测到管道执行模式${NC}"
+    debug_output "检测到管道执行模式"
     # 确保标准输入可用
     exec 0</dev/tty
 fi
+
+# 输出当前参数
+debug_output "当前参数: $*"
 
 # 如果没有参数，显示交互式菜单
 if [ $# -eq 0 ]; then
@@ -34,6 +45,8 @@ if [ $# -eq 0 ]; then
     echo -e "${GREEN}0. 退出${NC}"
     read -p "输入选择的编号 (0-6): " choice
 
+    debug_output "用户选择: $choice"
+
     case "$choice" in
         1)
             echo -e "${GREEN}请选择要更换的软件源：${NC}"
@@ -41,6 +54,7 @@ if [ $# -eq 0 ]; then
             echo -e "${GREEN}2. 阿里云源${NC}"
             echo -e "${GREEN}3. 清华源${NC}"
             read -p "输入选择的编号 (1/2/3): " source_choice
+            debug_output "软件源选择: $source_choice"
             case "$source_choice" in
                 1) SOURCE="edu" ;;
                 2) SOURCE="aliyun" ;;
@@ -56,6 +70,7 @@ if [ $# -eq 0 ]; then
             echo -e "${GREEN}1. 5.4${NC}"
             echo -e "${GREEN}2. 6.1${NC}"
             read -p "输入选择的版本编号 (1/2): " kernel_choice
+            debug_output "内核版本选择: $kernel_choice"
             case "$kernel_choice" in
                 1) SRT_VERSION="5.4" ;;
                 2) SRT_VERSION="6.1" ;;
@@ -128,6 +143,15 @@ else
     done
 fi
 
+# 输出当前设置
+debug_output "当前设置:"
+debug_output "SOURCE: $SOURCE"
+debug_output "HOST: $HOST"
+debug_output "V2RAY: $V2RAY"
+debug_output "DOCKER: $DOCKER"
+debug_output "SRT_VERSION: $SRT_VERSION"
+debug_output "SRS: $SRS"
+
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
     echo -e "${RED}检测到 DNS 解析错误，正在修复...${NC}"
@@ -143,6 +167,7 @@ resolve_dns_issue() {
 # 封装 curl 和 wget 命令，自动处理 DNS 解析错误并重试
 execute_command() {
     local cmd="$1"
+    debug_output "执行命令: $cmd"
     eval "$cmd"
     if [ $? -ne 0 ]; then
         resolve_dns_issue
@@ -232,4 +257,4 @@ if [ "$SRS" = true ]; then
       ossrs/oryx:5
 fi
 
-echo "所有操作已完成。" 
+echo "所有操作已完成。"
