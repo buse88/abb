@@ -2,12 +2,13 @@
 
 # 只在 Debian 12 amd64 机器测试，功能有 V2RayA、HOST、SRT、SRS、Docker 在 CN 网络安装
 
-echo -e "版本 V2.9"
+echo -e "版本 V3.0"
 # ANSI 颜色码定义
 RED='\033[0;31m'    # 红色
 GREEN='\033[0;32m'  # 绿色
 BLUE='\033[0;34m'   # 蓝色
-NC='\033[0m'        # 无颜色
+YELLOW='\033[0;33m' # 黄色
+NC='\033[0m'        # 无颜色（RESET）
 
 # 处理 curl: (6) Could not resolve host 错误的函数
 resolve_dns_issue() {
@@ -171,7 +172,7 @@ uninstall_v2raya() {
     echo "请手动删除脚本文件（如果需要）。"
 }
 
-# 修改 HOST 的函数
+# 更新 GitHub Hosts 的函数
 modify_host() {
     echo -e "${RED}----------提示：V2和Host 二选一即可，不用都安装----------${NC}"
 
@@ -195,98 +196,40 @@ modify_host() {
         echo -e "${GREEN}curl 安装成功，继续执行...${NC}"
     fi
 
-    # 检查并安装 dig（dnsutils 包，如果未安装）
-    if ! command -v dig &> /dev/null; then
-        echo -e "${RED}未检测到 dig，正在安装 dnsutils...${NC}"
+    # 检查并安装 jq（如果未安装）
+    if ! command -v jq &> /dev/null; then
+        echo -e "${RED}未检测到 jq，正在安装...${NC}"
         sudo apt update
-        sudo apt install -y dnsutils
+        sudo apt install -y jq
         if [ $? -ne 0 ]; then
-            echo -e "${RED}安装 dnsutils 失败，请手动安装 dnsutils 后重试。${NC}"
+            echo -e "${RED}安装 jq 失败，请手动安装 jq 后重试。${NC}"
             return
         fi
-        echo -e "${GREEN}dnsutils 安装成功，继续执行...${NC}"
+        echo -e "${GREEN}jq 安装成功，继续执行...${NC}"
     fi
 
-    # 定义 GitHub 域名列表
-    DOMAINS=("github.com" "api.github.com" "raw.githubusercontent.com" "assets-cdn.github.com")
+    echo -e "${YELLOW}正在更新 GitHub 的 IP 地址...${NC}"
+    # 从 GitHub API 获取 IP 地址（使用 .web[] 替代 .git[]，因为 .git[] 是 Git 协议相关 IP）
+    GITHUB_IPS=$(curl -s https://api.github.com/meta | jq -r '.web[]')
+    if [[ -z "$GITHUB_IPS" ]]; then
+        echo -e "${RED}无法获取 GitHub 最新 IP，跳过更新 /etc/hosts${NC}"
+        return_to_menu
+        return
+    fi
 
-    # 定义备选 DNS 服务器，优先使用国内 DNS
-    DNS_SERVERS=("223.5.5.5" "119.29.29.29" "114.114.114.114" "8.8.8.8" "1.1.1.1")
-
-    # 解析域名并测试最佳 IP
-    echo "解析域名并选择最佳 IP..."
-    BEST_IPS=()
-    for DOMAIN in "${DOMAINS[@]}"; do
-        IP_LIST=""
-        CNAME=""
-        # 尝试多个 DNS 服务器解析域名
-        for DNS in "${DNS_SERVERS[@]}"; do
-            echo -e "${BLUE}尝试使用 DNS $DNS 解析 $DOMAIN...${NC}"
-            # 获取完整的 DNS 记录
-            DNS_RESULT=$(dig @"$DNS" "$DOMAIN" A +noall +answer 2>/dev/null)
-            IP_LIST=$(echo "$DNS_RESULT" | grep -E '^[a-zA-Z0-9]' | awk '{print $5}' | grep -v '\.$')
-            CNAME=$(dig @"$DNS" "$DOMAIN" CNAME +short 2>/dev/null | grep -v '\.$')
-            if [ -n "$IP_LIST" ] || [ -n "$CNAME" ]; then
-                echo -e "${BLUE}解析结果: IPs=$IP_LIST, CNAME=$CNAME${NC}"
-                break
-            fi
-        done
-
-        # 如果有 CNAME，进一步解析 CNAME 的 A 记录
-        if [ -n "$CNAME" ] && [ -z "$IP_LIST" ] && ! echo "$CNAME" | grep -q "communications error"; then
-            echo -e "${BLUE}检测到 CNAME $CNAME，正在解析其 A 记录...${NC}"
-            for DNS in "${DNS_SERVERS[@]}"; do
-                DNS_RESULT=$(dig @"$DNS" "$CNAME" A +noall +answer 2>/dev/null)
-                IP_LIST=$(echo "$DNS_RESULT" | grep -E '^[a-zA-Z0-9]' | awk '{print $5}' | grep -v '\.$')
-                if [ -n "$IP_LIST" ]; then
-                    echo -e "${BLUE}CNAME 解析结果: $IP_LIST${NC}"
-                    break
-                fi
-            done
-        fi
-
-        if [ -z "$IP_LIST" ]; then
-            echo -e "${RED}未找到 $DOMAIN 的 IP 地址，所有 DNS 服务器均无响应，请检查网络或 DNS 设置。${NC}"
-            continue
-        fi
-
-        # 测试每个 IP 的延迟，选择延迟最低的 IP
-        BEST_IP=""
-        MIN_DELAY=999999
-        for IP in $IP_LIST; do
-            # 排除无效 IP（如 0.0.0.0）
-            if [ "$IP" = "0.0.0.0" ]; then
-                continue
-            fi
-            DELAY=$(ping -c 1 -w 2 "$IP" | grep 'time=' | awk -F'time=' '{print $2}' | awk '{print $1}')
-            if [ -n "$DELAY" ] && (( $(echo "$DELAY < $MIN_DELAY" | bc -l) )); then
-                MIN_DELAY=$DELAY
-                BEST_IP=$IP
-            fi
-        done
-
-        if [ -n "$BEST_IP" ]; then
-            BEST_IPS+=("$BEST_IP")
-            echo "$DOMAIN 的最佳 IP: $BEST_IP (延迟: $MIN_DELAY ms)"
-        else
-            echo -e "${RED}未找到 $DOMAIN 的可用 IP 地址，可能无法 ping 通或所有 IP 无效。${NC}"
-        fi
+    # 移除现有的 GitHub 相关条目
+    for domain in "github.com" "objects.githubusercontent.com" "raw.githubusercontent.com"; do
+        sudo sed -i "/$domain/d" /etc/hosts
     done
 
-    # 更新 /etc/hosts 文件
-    echo "更新 /etc/hosts 文件..."
-    for i in "${!DOMAINS[@]}"; do
-        DOMAIN=${DOMAINS[$i]}
-        IP=${BEST_IPS[$i]}
-        if [ -n "$IP" ]; then
-            # 移除已有的该域名条目
-            sudo sed -i "/$DOMAIN/d" /etc/hosts
-            # 添加新的 IP 和域名映射
-            echo "$IP $DOMAIN" | sudo tee -a /etc/hosts > /dev/null
-        fi
+    # 添加新的 IP 和域名映射
+    for ip in $GITHUB_IPS; do
+        echo "$ip github.com" | sudo tee -a /etc/hosts > /dev/null
+        echo "$ip objects.githubusercontent.com" | sudo tee -a /etc/hosts > /dev/null
+        echo "$ip raw.githubusercontent.com" | sudo tee -a /etc/hosts > /dev/null
     done
 
-    echo "/etc/hosts 文件修改完成。"
+    echo -e "${GREEN}GitHub 的 IP 地址已更新！${NC}"
     # 返回选择页面
     return_to_menu
 }
